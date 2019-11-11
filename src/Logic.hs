@@ -21,15 +21,6 @@ dungeonMap = [".....",
                ".....",
                "....."]
 
-createCommandBlock :: Char -> (Spot -> Spot) -> (CoordX, CoordY) -> Spot
-createCommandBlock char func loc = Spot Nothing (CmdBlock char func loc)
-
-createWall :: Char -> Spot
-createWall char =  Spot Nothing (Wall char)
-
-createDoor :: Char -> Bool -> Spot
-createDoor char open =  Spot Nothing (Door char open)
-
 -- some mon interaction here
 createFloor :: Floor -> Spot -> Spot
 createFloor floor spot = Spot (spotMonster spot) floor
@@ -150,14 +141,14 @@ activateCmdBlock coords smap
 
 openDoor :: Spot -> Spot
 openDoor s
-    | isClosedDoor floor = createDoor '/' True 
+    | isClosedDoor floor = createFloor (Door '/' True) s 
     | otherwise = s
     where
         floor = spotFloor s
 
 closeDoor :: Spot -> Spot
 closeDoor s
-    | isOpenDoor floor = createDoor '+' False
+    | isOpenDoor floor = createFloor (Door '+' False) s
     | otherwise = s
     where
         floor = spotFloor s
