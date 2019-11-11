@@ -162,27 +162,6 @@ closeDoor s
     where
         floor = spotFloor s
 
--- make automated create function taking alter function with chassis here
-openDoorInCoordsInner :: CoordY -> SpotLine -> SpotLine
-openDoorInCoordsInner y (s:ss)
-    | y /= 0 = s : openDoorInCoordsInner (y - 1) ss
-    | otherwise = openDoor s : ss
-
-openDoorInCoords :: (CoordX, CoordY) -> SpotMap -> SpotMap
-openDoorInCoords (x, y) (sl:sls)
-    | x /= 0 = sl : openDoorInCoords (x - 1, y) sls
-    | otherwise = openDoorInCoordsInner y sl : sls
-
-closeDoorInCoordsInner :: CoordY -> SpotLine -> SpotLine
-closeDoorInCoordsInner y (s:ss)
-    | y /= 0 = s : closeDoorInCoordsInner (y - 1) ss
-    | otherwise = closeDoor s : ss
-
-closeDoorInCoords :: (CoordX, CoordY) -> SpotMap -> SpotMap
-closeDoorInCoords (x, y) (sl:sls)
-    | x /= 0 = sl : closeDoorInCoords (x - 1, y) sls
-    | otherwise = closeDoorInCoordsInner y sl : sls
-
 isCmdBlock :: Floor -> Bool
 isCmdBlock (CmdBlock _ _ _) = True
 isCmdBlock _ = False
