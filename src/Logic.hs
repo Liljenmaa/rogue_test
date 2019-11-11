@@ -72,16 +72,6 @@ setMonsterToSpotMap mon (x, y) (sline:s)
     | x == 0 = setMonsterToSpotLine mon y sline : s
     | otherwise = sline : setMonsterToSpotMap mon ((x - 1), y) s
 
-emptyMonsterFromSpotLine :: CoordY -> SpotLine -> SpotLine
-emptyMonsterFromSpotLine y (s:ss)
-    | y == 0 = Spot { spotMonster = Nothing, spotFloor = spotFloor s } : ss
-    | otherwise = s : emptyMonsterFromSpotLine (y - 1) ss
-
-emptyMonsterFromSpotMap :: (CoordX, CoordY) -> SpotMap -> SpotMap
-emptyMonsterFromSpotMap (x, y) (sline:s)
-    | x == 0 = emptyMonsterFromSpotLine y sline : s
-    | otherwise = sline : emptyMonsterFromSpotMap ((x - 1), y) s
-
 retrieveOutputSpot :: Spot -> Sym
 retrieveOutputSpot spot
     | spotMonster spot /= Nothing = symbolMon $ fromMaybe (Monster ' ') (spotMonster spot)
@@ -220,7 +210,7 @@ moveMonster (x, y) dir smap
     | dir == 'n' && checkMoveLegality (x, y) dir smap = (se, setMonsterToSpotMap mon se monRemovedMap)
     | otherwise = (stay, smap)
     where
-        monRemovedMap = emptyMonsterFromSpotMap (x, y) smap
+        monRemovedMap = setMonsterToSpotMap Nothing (x, y) smap
         mon = spotMonster $ (smap !! x) !! y
         up = (x - 1, y)
         down = (x + 1, y)
