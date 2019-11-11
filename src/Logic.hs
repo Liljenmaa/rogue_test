@@ -47,20 +47,9 @@ createHorFloorOnCoords (x, y) w floor (sl:sls)
     | x /= 0 = sl : createHorFloorOnCoords (x - 1, y) w floor sls
     | otherwise = (createHorFloorOnCoordsInner y w floor sl) : sls
 
-generateSpot :: Char -> Spot
-generateSpot char = Spot Nothing (EmptyFloor char)
-
--- not in use
-generateSpotLineFromTemplate :: DungeonLine -> SpotLine
-generateSpotLineFromTemplate dunLine = map (\x -> generateSpot x) dunLine
-
 -- createVerWall 
 
 -- createHouse :: (CoordX, CoordY) -> (CoordX, CoordY)
-
--- not in use
-generateSpotMapFromTemplate :: DungeonMap -> SpotMap
-generateSpotMapFromTemplate dmap = map (\x -> generateSpotLineFromTemplate x) dmap
 
 setMonsterToSpotLine :: Maybe Monster -> CoordY -> SpotLine -> SpotLine
 setMonsterToSpotLine mon y (s:ss)
@@ -72,20 +61,8 @@ setMonsterToSpotMap mon (x, y) (sline:s)
     | x == 0 = setMonsterToSpotLine mon y sline : s
     | otherwise = sline : setMonsterToSpotMap mon ((x - 1), y) s
 
-retrieveOutputSpot :: Spot -> Sym
-retrieveOutputSpot spot
-    | spotMonster spot /= Nothing = symbolMon $ fromMaybe (Monster ' ') (spotMonster spot)
-    | otherwise = symbolFloor $ spotFloor spot
-
-retrieveOutputLine :: SpotLine -> OutputLine
-retrieveOutputLine sline = map (\x -> retrieveOutputSpot x) sline
-
-retrieveOutputMap :: SpotMap -> OutputMap
-retrieveOutputMap smap = map (\x -> retrieveOutputLine x) smap
-
--- not in use
-constructSpotMapFromTemplate :: SpotMap
-constructSpotMapFromTemplate = generateSpotMapFromTemplate dungeonMap
+generateSpot :: Char -> Spot
+generateSpot char = Spot Nothing (EmptyFloor char)
 
 generateSpotLine :: Width -> SpotLine
 generateSpotLine y
@@ -99,6 +76,18 @@ generateSpotMapInner x y
 
 generateSpotMap :: Height -> Width -> (CoordX, CoordY) -> SpotMap
 generateSpotMap x y plCoords = setMonsterToSpotMap (Just (Player '@')) plCoords (generateSpotMapInner x y)
+
+-- not in use
+generateSpotLineFromTemplate :: DungeonLine -> SpotLine
+generateSpotLineFromTemplate dunLine = map (\x -> generateSpot x) dunLine
+
+-- not in use
+generateSpotMapFromTemplate :: DungeonMap -> SpotMap
+generateSpotMapFromTemplate dmap = map (\x -> generateSpotLineFromTemplate x) dmap
+
+-- not in use
+constructSpotMapFromTemplate :: SpotMap
+constructSpotMapFromTemplate = generateSpotMapFromTemplate dungeonMap
 
 -- not in use
 constructSpotMapWithPlayerFromTemplate :: (CoordX, CoordY) -> SpotMap
@@ -118,6 +107,17 @@ retrieveSpot (x, y) (sl:sls)
     | x /= 0 = retrieveSpot ((x - 1), y) sls
     | otherwise = retrieveSpotInner y sl
 
+retrieveOutputSpot :: Spot -> Sym
+retrieveOutputSpot spot
+    | spotMonster spot /= Nothing = symbolMon $ fromMaybe (Monster ' ') (spotMonster spot)
+    | otherwise = symbolFloor $ spotFloor spot
+
+retrieveOutputLine :: SpotLine -> OutputLine
+retrieveOutputLine sline = map (\x -> retrieveOutputSpot x) sline
+
+retrieveOutputMap :: SpotMap -> OutputMap
+retrieveOutputMap smap = map (\x -> retrieveOutputLine x) smap
+
 doActionOnCoordsInner :: CoordY -> (Spot -> Spot) -> SpotLine -> SpotLine
 doActionOnCoordsInner y func (s:ss)
     | y /= 0 = s : doActionOnCoordsInner (y - 1) func ss
@@ -128,6 +128,7 @@ doActionOnCoords (x, y) func (sl:sls)
     | x /= 0 = sl : doActionOnCoords (x - 1, y) func sls
     | otherwise = (doActionOnCoordsInner y func sl) : sls
 
+-- obsolete this
 activateCmdBlock :: (CoordX, CoordY) -> SpotMap -> SpotMap
 activateCmdBlock coords smap
     | isCmdBlock floor = doActionOnCoords (loc floor) (cmdAction floor) smap
