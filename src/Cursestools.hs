@@ -1,8 +1,8 @@
 module Cursestools
 (
     receiveNumber,
-    cCheckForNumbers,
     extractEventLetter,
+    checkNumberKey,
     clearScr,
     cursorDown,
     drawStrLn,
@@ -16,7 +16,7 @@ import UI.NCurses
 
 receiveNumberInner :: Window -> Integer -> Integer -> String -> Curses (Int)
 receiveNumberInner w x y acc = do
-    ev' <- waitFor w (\ev -> cCheckForNumbers ev || ev == EventCharacter '\n')
+    ev' <- waitFor w (\ev -> checkNumberKey ev || ev == EventCharacter '\n')
     if ev' == EventCharacter '\n'
         then do
             updateWindow w $ do
@@ -39,8 +39,8 @@ receiveNumber w = do
     curPos <- getCursor w
     receiveNumberInner w (fst curPos) (snd curPos) ""
 
-cCheckForNumbers :: Event -> Bool
-cCheckForNumbers (EventCharacter num) = isDigit num
+checkNumberKey :: Event -> Bool
+checkNumberKey (EventCharacter num) = isDigit num
 
 extractEventLetter :: Event -> Char
 extractEventLetter (EventCharacter char) = char
