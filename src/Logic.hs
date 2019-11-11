@@ -2,7 +2,7 @@ module Logic
 (
     moveMonster,
     retrieveOutputMap,
-    constructEmptySpotMapWithPlayer,
+    generateSpotMap,
     createFloorOnCoords,
     createHorFloorOnCoords,
     openDoor,
@@ -50,25 +50,17 @@ createHorFloorOnCoords (x, y) w floor (sl:sls)
 generateSpot :: Char -> Spot
 generateSpot char = Spot Nothing (EmptyFloor char)
 
-generateSpotLine :: DungeonLine -> SpotLine
-generateSpotLine dunLine = map (\x -> generateSpot x) dunLine
-
-generateEmptySpotLineFromValues :: Width -> SpotLine
-generateEmptySpotLineFromValues y
-    | y == 0 = []
-    | otherwise = (generateSpot '.') : generateEmptySpotLineFromValues (y - 1)
+-- not in use
+generateSpotLineFromTemplate :: DungeonLine -> SpotLine
+generateSpotLineFromTemplate dunLine = map (\x -> generateSpot x) dunLine
 
 -- createVerWall 
 
 -- createHouse :: (CoordX, CoordY) -> (CoordX, CoordY)
 
-generateSpotMap :: DungeonMap -> SpotMap
-generateSpotMap dmap = map (\x -> generateSpotLine x) dmap
-
-generateEmptySpotMapFromValues :: Height -> Width -> SpotMap
-generateEmptySpotMapFromValues x y
-    | x == 0 = []
-    | otherwise = generateEmptySpotLineFromValues y : generateEmptySpotMapFromValues (x - 1) y
+-- not in use
+generateSpotMapFromTemplate :: DungeonMap -> SpotMap
+generateSpotMapFromTemplate dmap = map (\x -> generateSpotLineFromTemplate x) dmap
 
 setMonsterToSpotLine :: Maybe Monster -> CoordY -> SpotLine -> SpotLine
 setMonsterToSpotLine mon y (s:ss)
@@ -101,17 +93,30 @@ retrieveOutputLine sline = map (\x -> retrieveOutputSpot x) sline
 retrieveOutputMap :: SpotMap -> OutputMap
 retrieveOutputMap smap = map (\x -> retrieveOutputLine x) smap
 
-constructSpotMap :: SpotMap
-constructSpotMap = generateSpotMap dungeonMap
+-- not in use
+constructSpotMapFromTemplate :: SpotMap
+constructSpotMapFromTemplate = generateSpotMapFromTemplate dungeonMap
 
-constructEmptySpotMapWithPlayer :: Height -> Width -> (CoordX, CoordY) -> SpotMap
-constructEmptySpotMapWithPlayer x y plCoords = setMonsterToSpotMap (Just Player { symbolMon = '@' }) plCoords (generateEmptySpotMapFromValues x y)
+generateSpotLine :: Width -> SpotLine
+generateSpotLine y
+    | y == 0 = []
+    | otherwise = (generateSpot '.') : generateSpotLine (y - 1)
 
-constructSpotMapWithPlayer :: (CoordX, CoordY) -> SpotMap
-constructSpotMapWithPlayer plCoords = setMonsterToSpotMap (Just Player { symbolMon = '@' }) plCoords constructSpotMap
+generateSpotMapInner :: Height -> Width -> SpotMap
+generateSpotMapInner x y
+    | x == 0 = []
+    | otherwise = generateSpotLine y : generateSpotMapInner (x - 1) y 
 
+generateSpotMap :: Height -> Width -> (CoordX, CoordY) -> SpotMap
+generateSpotMap x y plCoords = setMonsterToSpotMap (Just (Player '@')) plCoords (generateSpotMapInner x y)
+
+-- not in use
+constructSpotMapWithPlayerFromTemplate :: (CoordX, CoordY) -> SpotMap
+constructSpotMapWithPlayerFromTemplate plCoords = setMonsterToSpotMap (Just Player { symbolMon = '@' }) plCoords constructSpotMapFromTemplate
+
+-- not in use
 constructOutputMap :: OutputMap
-constructOutputMap = retrieveOutputMap (constructSpotMapWithPlayer (2, 2))
+constructOutputMap = retrieveOutputMap (constructSpotMapWithPlayerFromTemplate (2, 2))
 
 retrieveSpotInner :: CoordY -> SpotLine -> Spot
 retrieveSpotInner y (s:ss)

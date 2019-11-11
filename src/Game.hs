@@ -53,7 +53,7 @@ gameLoop w x y = do
     (gl . block . door . wall) start
     return ()
     where
-        start = constructEmptySpotMapWithPlayer x y ((x `div` 2), (y `div` 2))
+        start = generateSpotMap x y ((x `div` 2), (y `div` 2))
         wall = createHorFloorOnCoords (1, 1) 2 (Wall '#')
         door = createFloorOnCoords (4, 4) (Door '+' False)
         block = createFloorOnCoords (3, 1) (CmdBlock '¤' openDoor (4, 4))
