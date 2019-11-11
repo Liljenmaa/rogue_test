@@ -3,9 +3,9 @@ module Logic
     moveMonster,
     retrieveOutputMap,
     constructEmptySpotMapWithPlayer,
+    createFloorOnCoords,
+    createHorFloorOnCoords,
     createHorWall,
-    createDoorOnCoords,
-    createCmdBlockOnCoords,
     openDoor,
     isCmdBlockPress
 ) where
@@ -31,6 +31,33 @@ createWall char =  Spot Nothing (Wall char)
 createDoor :: Char -> Bool -> Spot
 createDoor char open =  Spot Nothing (Door char open)
 
+-- some mon interaction here
+createFloor :: Floor -> Spot -> Spot
+createFloor floor spot = Spot (spotMonster spot) floor
+
+createFloorOnCoordsInner :: CoordY -> Floor -> SpotLine -> SpotLine
+createFloorOnCoordsInner y floor (s:ss)
+    | y /= 0 = s : createFloorOnCoordsInner (y - 1) floor ss
+    | otherwise = (createFloor floor s) : ss
+
+createFloorOnCoords :: (CoordX, CoordY) -> Floor -> SpotMap -> SpotMap
+createFloorOnCoords (x, y) floor (sl:sls)
+    | x /= 0 = sl : createFloorOnCoords (x - 1, y) floor sls
+    | otherwise = (createFloorOnCoordsInner y floor sl) : sls
+
+createHorFloorOnCoordsInner :: CoordY -> Width -> Floor -> SpotLine -> SpotLine
+createHorFloorOnCoordsInner y w floor (s:ss)
+    | y /= 0 = s : createHorFloorOnCoordsInner (y - 1) w floor ss
+    | otherwise = if w /= 0
+        then (createFloor floor s) : createHorFloorOnCoordsInner 0 (w - 1) floor ss
+        else s : ss
+
+-- something is wrong
+createHorFloorOnCoords :: (CoordX, CoordY) -> Width -> Floor -> SpotMap -> SpotMap
+createHorFloorOnCoords (x, y) w floor (sl:sls)
+    | x /= 0 = sl : createHorFloorOnCoords (x - 1, y) w floor (sl:sls)
+    | otherwise = (createHorFloorOnCoordsInner y w floor sl) : sls
+
 generateSpot :: Char -> Spot
 generateSpot char = Spot Nothing (EmptyFloor char)
 
@@ -49,7 +76,6 @@ createHorWallInner y width (s:ss)
         then (createWall '#') : createHorWallInner 0 (width - 1) ss
         else s : ss
 
--- might be unoptimized due to :
 createHorWall :: (CoordX, CoordY) -> Width -> SpotMap -> SpotMap
 createHorWall (x, y) width (sl:sls)
     | x /= 0 = sl : createHorWall ((x - 1), y) width sls
@@ -58,26 +84,6 @@ createHorWall (x, y) width (sl:sls)
 -- createVerWall 
 
 -- createHouse :: (CoordX, CoordY) -> (CoordX, CoordY)
-
-createCmdBlockOnCoordsInner :: CoordY -> (Spot -> Spot) -> (CoordX, CoordY) -> SpotLine -> SpotLine
-createCmdBlockOnCoordsInner y func loc (s:ss)
-    | y /= 0 = s : createCmdBlockOnCoordsInner (y - 1) func loc ss
-    | otherwise = (createCommandBlock '¤' func loc) : ss
-
-createCmdBlockOnCoords :: (CoordX, CoordY) -> (Spot -> Spot) -> (CoordX, CoordY) -> SpotMap -> SpotMap
-createCmdBlockOnCoords (x, y) func loc (sl:sls)
-    | x /= 0 = sl : createCmdBlockOnCoords (x - 1, y) func loc sls
-    | otherwise = (createCmdBlockOnCoordsInner y func loc sl) : sls
-
-createDoorOnCoordsInner :: CoordY -> SpotLine -> SpotLine
-createDoorOnCoordsInner y (s:ss)
-    | y /= 0 = s : createDoorOnCoordsInner (y - 1) ss
-    | otherwise = (createDoor '+' False) : ss
-
-createDoorOnCoords :: (CoordX, CoordY) -> SpotMap -> SpotMap
-createDoorOnCoords (x, y) (sl:sls)
-    | x /= 0 = sl : createDoorOnCoords (x - 1, y) sls
-    | otherwise = (createDoorOnCoordsInner y sl) : sls 
 
 generateSpotMap :: DungeonMap -> SpotMap
 generateSpotMap dmap = map (\x -> generateSpotLine x) dmap
