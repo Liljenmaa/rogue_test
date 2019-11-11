@@ -99,14 +99,23 @@ gameLoopInner w x y smap = do
             
             gameLoopInner w newX newY newMmMap
 
+--     constructEmptySpotMapWithPlayer x y ((x `div` 2), (y `div` 2))
+--     >>= createHorWall (1, 1) 2
+--     >>= createDoorOnCoords (4, 4)
+--     >>= createCmdBlockOnCoords (3, 1) opendoor (4, 4)
+--     >>= gameLoopInner w (x `div` 2) (y `div` 2)
+--     return ()
+
 gameLoop :: Window -> Height -> Width -> Curses ()
 gameLoop w x y = do
-    let spotMap = constructEmptySpotMapWithPlayer x y ((x `div` 2), (y `div` 2))
-    let wallSpotMap = createHorWall (1, 1) 2 spotMap
-    let finalSpotMap = createDoorOnCoords (4, 4) wallSpotMap
-    let finalFinalSpotMap = createCmdBlockOnCoords (3, 1) openDoor (4, 4) finalSpotMap
-    gameLoopInner w (x `div` 2) (y `div` 2) finalFinalSpotMap
+    (gl . block . door . wall) start
     return ()
+    where
+        start = constructEmptySpotMapWithPlayer x y ((x `div` 2), (y `div` 2))
+        wall = createHorWall (1, 1) 2
+        door = createDoorOnCoords (4, 4)
+        block = createCmdBlockOnCoords (3, 1) openDoor (4, 4)
+        gl = gameLoopInner w (x `div` 2) (y `div` 2)
 
 mainCurses :: IO ()
 mainCurses = runCurses $ do

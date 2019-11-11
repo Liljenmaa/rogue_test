@@ -254,8 +254,6 @@ isCmdBlockPress coords smap
     | otherwise = smap
     where floor = spotFloor $ retrieveSpot coords smap
 
-updateSpotMap
-
 checkObstacle :: (CoordX, CoordY) -> SpotMap -> Bool
 checkObstacle coords smap = isWall floor || isClosedDoor floor
     where floor = spotFloor $ retrieveSpot coords smap
