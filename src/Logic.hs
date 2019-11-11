@@ -5,7 +5,6 @@ module Logic
     constructEmptySpotMapWithPlayer,
     createFloorOnCoords,
     createHorFloorOnCoords,
-    createHorWall,
     openDoor,
     isCmdBlockPress
 ) where
@@ -52,10 +51,9 @@ createHorFloorOnCoordsInner y w floor (s:ss)
         then (createFloor floor s) : createHorFloorOnCoordsInner 0 (w - 1) floor ss
         else s : ss
 
--- something is wrong
 createHorFloorOnCoords :: (CoordX, CoordY) -> Width -> Floor -> SpotMap -> SpotMap
 createHorFloorOnCoords (x, y) w floor (sl:sls)
-    | x /= 0 = sl : createHorFloorOnCoords (x - 1, y) w floor (sl:sls)
+    | x /= 0 = sl : createHorFloorOnCoords (x - 1, y) w floor sls
     | otherwise = (createHorFloorOnCoordsInner y w floor sl) : sls
 
 generateSpot :: Char -> Spot
@@ -68,18 +66,6 @@ generateEmptySpotLineFromValues :: Width -> SpotLine
 generateEmptySpotLineFromValues y
     | y == 0 = []
     | otherwise = (generateSpot '.') : generateEmptySpotLineFromValues (y - 1)
-
-createHorWallInner :: CoordY -> Width -> SpotLine -> SpotLine
-createHorWallInner y width (s:ss)
-    | y /= 0 = s : createHorWallInner (y - 1) width ss
-    | otherwise = if width /= 0 
-        then (createWall '#') : createHorWallInner 0 (width - 1) ss
-        else s : ss
-
-createHorWall :: (CoordX, CoordY) -> Width -> SpotMap -> SpotMap
-createHorWall (x, y) width (sl:sls)
-    | x /= 0 = sl : createHorWall ((x - 1), y) width sls
-    | otherwise = (createHorWallInner y width sl) : sls
 
 -- createVerWall 
 
