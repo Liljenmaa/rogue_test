@@ -1,4 +1,4 @@
-module Game 
+module Game
 (
     gameLoop
 ) where
