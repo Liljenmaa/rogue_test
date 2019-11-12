@@ -3,6 +3,7 @@ module Logic
     moveMonster,
     retrieveOutputMap,
     generateSpotMap,
+    generateFromDungeonMap,
     createFloorOnCoords,
     createHorFloorOnCoords,
     openDoor,
@@ -15,11 +16,14 @@ import Data.Maybe
 import Datatypes
 
 dungeonMap :: DungeonMap
-dungeonMap = [".....",
-               ".....",
-               ".....",
-               ".....",
-               "....."]
+dungeonMap =  ["..#.....",
+               "........",
+               "..@.....",
+               "./.+....",
+               "..#.....",
+               "........",
+               "........",
+               "........"]
 
 -- some mon interaction here
 createFloor :: Floor -> Spot -> Spot
@@ -77,25 +81,23 @@ generateSpotMapInner x y
 generateSpotMap :: Height -> Width -> (CoordX, CoordY) -> SpotMap
 generateSpotMap x y plCoords = setMonsterToSpotMap (Just (Player '@')) plCoords (generateSpotMapInner x y)
 
--- not in use
-generateSpotLineFromTemplate :: DungeonLine -> SpotLine
-generateSpotLineFromTemplate dunLine = map (\x -> generateSpot x) dunLine
+generateSpotFromTemplate :: Sym -> Spot
+generateSpotFromTemplate sym = case sym of
+    '.' -> Spot Nothing (EmptyFloor '.')
+    '#' -> Spot Nothing (Wall '#')
+    '+' -> Spot Nothing (Door '+' False)
+    '/' -> Spot Nothing (Door '/' True)
+--  '¤' -> Spot Nothing (CmdBlock something)
+    '@' -> Spot (Just (Player '@')) (EmptyFloor '.')
 
--- not in use
+generateSpotLineFromTemplate :: DungeonLine -> SpotLine
+generateSpotLineFromTemplate dunLine = map (\x -> generateSpotFromTemplate x) dunLine
+
 generateSpotMapFromTemplate :: DungeonMap -> SpotMap
 generateSpotMapFromTemplate dmap = map (\x -> generateSpotLineFromTemplate x) dmap
 
--- not in use
-constructSpotMapFromTemplate :: SpotMap
-constructSpotMapFromTemplate = generateSpotMapFromTemplate dungeonMap
-
--- not in use
-constructSpotMapWithPlayerFromTemplate :: (CoordX, CoordY) -> SpotMap
-constructSpotMapWithPlayerFromTemplate plCoords = setMonsterToSpotMap (Just Player { symbolMon = '@' }) plCoords constructSpotMapFromTemplate
-
--- not in use
-constructOutputMap :: OutputMap
-constructOutputMap = retrieveOutputMap (constructSpotMapWithPlayerFromTemplate (2, 2))
+generateFromDungeonMap :: SpotMap
+generateFromDungeonMap = generateSpotMapFromTemplate dungeonMap
 
 retrieveSpotInner :: CoordY -> SpotLine -> Spot
 retrieveSpotInner y (s:ss)
