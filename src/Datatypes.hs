@@ -8,10 +8,12 @@ module Datatypes
     Width,
     CoordX,
     CoordY,
+    Coords,
     Sym,
     SpotLine,
     SpotMap,
     Direction,
+    Action,
     Monster (..),
     Spot (..),
     Floor (..)
@@ -25,10 +27,12 @@ type Height = Int
 type Width = Int
 type CoordX = Int
 type CoordY = Int
+type Coords = (CoordX, CoordY)
 type Sym = Char
 type SpotLine = [Spot]
 type SpotMap = [SpotLine]
 type Direction = Char
+type Action = Spot -> Spot
 
 data Monster = Player {
     symbolMon :: Sym
@@ -50,6 +54,6 @@ data Floor = EmptyFloor {
     isOpen :: Bool
 } | CmdBlock {
     symbolFloor :: Sym,
-    cmdAction :: (Spot -> Spot),
+    cmdAction :: Action,
     loc :: (CoordX, CoordY)
 }

@@ -16,6 +16,32 @@ printDungeon (x:xs) = do
     moveCursor ((fst cursorPos) + 1) 0
     printDungeon xs
 
+-- not ready
+-- betaGameLoopInner :: Window -> SpotMap -> Curses ()
+-- betaGameLoopInner w smap = do
+--     
+--     clearScr w
+--     
+--     updateWindow w $ do
+--         printDungeon $ retrieveOutputMap smap
+--     render
+--     
+--     input <- waifFor w (\ev -> True)
+--     let realInput = extractEventLetter input
+--     
+--     if realInput == 'S' || realInput == 's'
+--         then do
+--             return ()
+--         else do
+--             let mmResult = moveMonster (x, y) realInput smap
+--             let mmCoords = fst mmResult
+--             let newX = fst mmCoords
+--             let newY = snd mmCoords
+--             let mmMap = snd mmResult
+--             let newMmMap = isCmdBlockPress (newX, newY) mmMap
+--             
+--             betaGameLoopInner w newX newY newMmMap
+
 gameLoopInner :: Window -> CoordX -> CoordY -> SpotMap -> Curses ()
 gameLoopInner w x y smap = do
     
@@ -40,6 +66,11 @@ gameLoopInner w x y smap = do
             let newMmMap = isCmdBlockPress (newX, newY) mmMap
             
             gameLoopInner w newX newY newMmMap
+
+-- betaGameLoop :: Window -> DungeonMap -> Curses ()
+-- betaGameLoop w dmap = do
+--    betaGameLoopInner w $ generateSpotMapFromTemplate dmap
+--    return ()
 
 --     constructEmptySpotMapWithPlayer x y ((x `div` 2), (y `div` 2))
 --     >>= createHorWall (1, 1) 2

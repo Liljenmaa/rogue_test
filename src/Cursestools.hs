@@ -2,6 +2,7 @@ module Cursestools
 (
     receiveNumber,
     extractEventLetter,
+    -- generateDungeonMapFromFile,
     checkNumberKey,
     clearScr,
     cursorDown,
@@ -10,9 +11,10 @@ module Cursestools
 ) where
 
 import Data.Char
-
-import Datatypes
 import UI.NCurses
+-- import Data.List.Split
+
+-- import Datatypes
 
 receiveNumberInner :: Window -> Integer -> Integer -> String -> Curses (Int)
 receiveNumberInner w x y acc = do
@@ -38,6 +40,11 @@ receiveNumber :: Window -> Curses (Int)
 receiveNumber w = do
     curPos <- getCursor w
     receiveNumberInner w (fst curPos) (snd curPos) ""
+
+-- generateDungeonMapFromFile :: FilePath -> IO (DungeonMap)
+-- generateDungeonMapFromFile fp = do
+--     str <- readFile fp
+--     endBy "\n" str
 
 checkNumberKey :: Event -> Bool
 checkNumberKey (EventCharacter num) = isDigit num

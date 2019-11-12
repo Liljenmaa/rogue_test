@@ -3,7 +3,7 @@ module Logic
     moveMonster,
     retrieveOutputMap,
     generateSpotMap,
-    generateFromDungeonMap,
+    generateSpotMapFromTemplate,
     createFloorOnCoords,
     createHorFloorOnCoords,
     openDoor,
@@ -34,7 +34,7 @@ createFloorOnCoordsInner y floor (s:ss)
     | y /= 0 = s : createFloorOnCoordsInner (y - 1) floor ss
     | otherwise = (createFloor floor s) : ss
 
-createFloorOnCoords :: (CoordX, CoordY) -> Floor -> SpotMap -> SpotMap
+createFloorOnCoords :: Coords -> Floor -> SpotMap -> SpotMap
 createFloorOnCoords (x, y) floor (sl:sls)
     | x /= 0 = sl : createFloorOnCoords (x - 1, y) floor sls
     | otherwise = (createFloorOnCoordsInner y floor sl) : sls
@@ -46,7 +46,7 @@ createHorFloorOnCoordsInner y w floor (s:ss)
         then (createFloor floor s) : createHorFloorOnCoordsInner 0 (w - 1) floor ss
         else s : ss
 
-createHorFloorOnCoords :: (CoordX, CoordY) -> Width -> Floor -> SpotMap -> SpotMap
+createHorFloorOnCoords :: Coords -> Width -> Floor -> SpotMap -> SpotMap
 createHorFloorOnCoords (x, y) w floor (sl:sls)
     | x /= 0 = sl : createHorFloorOnCoords (x - 1, y) w floor sls
     | otherwise = (createHorFloorOnCoordsInner y w floor sl) : sls
@@ -60,13 +60,13 @@ setMonsterToSpotLine mon y (s:ss)
     | y == 0 = Spot { spotMonster = mon, spotFloor = spotFloor s } : ss
     | otherwise = s : setMonsterToSpotLine mon (y - 1) ss
 
-setMonsterToSpotMap :: Maybe Monster -> (CoordX, CoordY) -> SpotMap -> SpotMap
+setMonsterToSpotMap :: Maybe Monster -> Coords -> SpotMap -> SpotMap
 setMonsterToSpotMap mon (x, y) (sline:s)
     | x == 0 = setMonsterToSpotLine mon y sline : s
     | otherwise = sline : setMonsterToSpotMap mon ((x - 1), y) s
 
-generateSpot :: Char -> Spot
-generateSpot char = Spot Nothing (EmptyFloor char)
+generateSpot :: Sym -> Spot
+generateSpot sym = Spot Nothing (EmptyFloor sym)
 
 generateSpotLine :: Width -> SpotLine
 generateSpotLine y
@@ -78,7 +78,7 @@ generateSpotMapInner x y
     | x == 0 = []
     | otherwise = generateSpotLine y : generateSpotMapInner (x - 1) y 
 
-generateSpotMap :: Height -> Width -> (CoordX, CoordY) -> SpotMap
+generateSpotMap :: Height -> Width -> Coords -> SpotMap
 generateSpotMap x y plCoords = setMonsterToSpotMap (Just (Player '@')) plCoords (generateSpotMapInner x y)
 
 generateSpotFromTemplate :: Sym -> Spot
@@ -96,15 +96,12 @@ generateSpotLineFromTemplate dunLine = map (\x -> generateSpotFromTemplate x) du
 generateSpotMapFromTemplate :: DungeonMap -> SpotMap
 generateSpotMapFromTemplate dmap = map (\x -> generateSpotLineFromTemplate x) dmap
 
-generateFromDungeonMap :: SpotMap
-generateFromDungeonMap = generateSpotMapFromTemplate dungeonMap
-
 retrieveSpotInner :: CoordY -> SpotLine -> Spot
 retrieveSpotInner y (s:ss)
     | y /= 0 = retrieveSpotInner (y - 1) ss
     | otherwise = s
 
-retrieveSpot :: (CoordX, CoordY) -> SpotMap -> Spot
+retrieveSpot :: Coords -> SpotMap -> Spot
 retrieveSpot (x, y) (sl:sls)
     | x /= 0 = retrieveSpot ((x - 1), y) sls
     | otherwise = retrieveSpotInner y sl
@@ -120,31 +117,31 @@ retrieveOutputLine sline = map (\x -> retrieveOutputSpot x) sline
 retrieveOutputMap :: SpotMap -> OutputMap
 retrieveOutputMap smap = map (\x -> retrieveOutputLine x) smap
 
-doActionOnCoordsInner :: CoordY -> (Spot -> Spot) -> SpotLine -> SpotLine
+doActionOnCoordsInner :: CoordY -> Action -> SpotLine -> SpotLine
 doActionOnCoordsInner y func (s:ss)
     | y /= 0 = s : doActionOnCoordsInner (y - 1) func ss
     | otherwise = (func s) : ss 
 
-doActionOnCoords :: (CoordX, CoordY) -> (Spot -> Spot) -> SpotMap -> SpotMap
+doActionOnCoords :: Coords -> Action -> SpotMap -> SpotMap
 doActionOnCoords (x, y) func (sl:sls)
     | x /= 0 = sl : doActionOnCoords (x - 1, y) func sls
     | otherwise = (doActionOnCoordsInner y func sl) : sls
 
 -- obsolete this
-activateCmdBlock :: (CoordX, CoordY) -> SpotMap -> SpotMap
+activateCmdBlock :: Coords -> SpotMap -> SpotMap
 activateCmdBlock coords smap
     | isCmdBlock floor = doActionOnCoords (loc floor) (cmdAction floor) smap
     | otherwise = smap
     where floor = spotFloor $ retrieveSpot coords smap
 
-openDoor :: Spot -> Spot
+openDoor :: Action
 openDoor s
     | isClosedDoor floor = createFloor (Door '/' True) s 
     | otherwise = s
     where
         floor = spotFloor s
 
-closeDoor :: Spot -> Spot
+closeDoor :: Action
 closeDoor s
     | isOpenDoor floor = createFloor (Door '+' False) s
     | otherwise = s
@@ -167,17 +164,17 @@ isOpenDoor :: Floor -> Bool
 isOpenDoor (Door sym isOpen) = isOpen
 isOpenDoor _ = False
 
-isCmdBlockPress :: (CoordX, CoordY) -> SpotMap -> SpotMap
+isCmdBlockPress :: Coords -> SpotMap -> SpotMap
 isCmdBlockPress coords smap
     | isCmdBlock floor = activateCmdBlock coords smap
     | otherwise = smap
     where floor = spotFloor $ retrieveSpot coords smap
 
-checkObstacle :: (CoordX, CoordY) -> SpotMap -> Bool
+checkObstacle :: Coords -> SpotMap -> Bool
 checkObstacle coords smap = isWall floor || isClosedDoor floor
     where floor = spotFloor $ retrieveSpot coords smap
 
-checkMoveLegality :: (CoordX, CoordY) -> Direction -> SpotMap -> Bool
+checkMoveLegality :: Coords -> Direction -> SpotMap -> Bool
 checkMoveLegality (x, y) dir smap
     | dir == 'h' = inBoundsMinY && not (checkObstacle left smap)
     | dir == 'j' = inBoundsMaxX && not (checkObstacle down smap)
@@ -201,7 +198,7 @@ checkMoveLegality (x, y) dir smap
         sw = (x + 1, y - 1)
         se = (x + 1, y + 1)
 
-moveMonster :: (CoordX, CoordY) -> Direction -> SpotMap -> ((CoordX, CoordY), SpotMap)
+moveMonster :: Coords -> Direction -> SpotMap -> (Coords, SpotMap)
 moveMonster (x, y) dir smap
     | dir == 'h' && checkMoveLegality (x, y) dir smap = (left, setMonsterToSpotMap mon left monRemovedMap)
     | dir == 'j' && checkMoveLegality (x, y) dir smap = (down, setMonsterToSpotMap mon down monRemovedMap)
