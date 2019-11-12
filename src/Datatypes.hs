@@ -9,6 +9,8 @@ module Datatypes
     CoordX,
     CoordY,
     Coords,
+    MonCoords,
+    MonCoordsList,
     Sym,
     SpotLine,
     SpotMap,
@@ -28,6 +30,8 @@ type Width = Int
 type CoordX = Int
 type CoordY = Int
 type Coords = (CoordX, CoordY)
+type MonCoords = Coords
+type MonCoordsList = [MonCoords]
 type Sym = Char
 type SpotLine = [Spot]
 type SpotMap = [SpotLine]

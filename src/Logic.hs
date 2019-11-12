@@ -2,10 +2,9 @@ module Logic
 (
     moveMonster,
     retrieveOutputMap,
-    generateSpotMap,
+--  generateSpotMap,
     generateSpotMapFromTemplate,
-    createFloorOnCoords,
-    createHorFloorOnCoords,
+    generateMonCoordsFromDMap,
     openDoor,
     isCmdBlockPress
 ) where
@@ -14,16 +13,6 @@ import Control.Applicative
 import Data.Maybe
 
 import Datatypes
-
-dungeonMap :: DungeonMap
-dungeonMap =  ["..#.....",
-               "........",
-               "..@.....",
-               "./.+....",
-               "..#.....",
-               "........",
-               "........",
-               "........"]
 
 -- some mon interaction here
 createFloor :: Floor -> Spot -> Spot
@@ -65,22 +54,27 @@ setMonsterToSpotMap mon (x, y) (sline:s)
     | x == 0 = setMonsterToSpotLine mon y sline : s
     | otherwise = sline : setMonsterToSpotMap mon ((x - 1), y) s
 
+-- not in use
 generateSpot :: Sym -> Spot
 generateSpot sym = Spot Nothing (EmptyFloor sym)
 
+-- not in use
 generateSpotLine :: Width -> SpotLine
 generateSpotLine y
     | y == 0 = []
     | otherwise = (generateSpot '.') : generateSpotLine (y - 1)
 
+-- not in use
 generateSpotMapInner :: Height -> Width -> SpotMap
 generateSpotMapInner x y
     | x == 0 = []
     | otherwise = generateSpotLine y : generateSpotMapInner (x - 1) y 
 
+-- not in use
 generateSpotMap :: Height -> Width -> Coords -> SpotMap
 generateSpotMap x y plCoords = setMonsterToSpotMap (Just (Player '@')) plCoords (generateSpotMapInner x y)
 
+-- maybe connect these two together sometime?
 generateSpotFromTemplate :: Sym -> Spot
 generateSpotFromTemplate sym = case sym of
     '.' -> Spot Nothing (EmptyFloor '.')
@@ -89,6 +83,22 @@ generateSpotFromTemplate sym = case sym of
     '/' -> Spot Nothing (Door '/' True)
 --  '¤' -> Spot Nothing (CmdBlock something)
     '@' -> Spot (Just (Player '@')) (EmptyFloor '.')
+
+generateMonCoordsFromSym :: Sym -> Coords -> MonCoordsList
+generateMonCoordsFromSym sym coords = case sym of
+    '@' -> [coords];
+     _  -> []
+
+generateMonCoordsFromDLine :: Coords -> DungeonLine -> MonCoordsList
+generateMonCoordsFromDLine _ [] = []
+generateMonCoordsFromDLine (x, y) (d:ds) = (generateMonCoordsFromSym d (x, y)) ++ generateMonCoordsFromDLine (x, y + 1) ds
+
+generateMonCoordsFromDMapInner :: Coords -> DungeonMap -> MonCoordsList
+generateMonCoordsFromDMapInner _ [] = []
+generateMonCoordsFromDMapInner (x, y) (dl:dls) = (generateMonCoordsFromDLine (x, y) dl) ++ generateMonCoordsFromDMapInner (x + 1, y) dls
+
+generateMonCoordsFromDMap :: DungeonMap -> MonCoordsList
+generateMonCoordsFromDMap dmap = generateMonCoordsFromDMapInner (0, 0) dmap
 
 generateSpotLineFromTemplate :: DungeonLine -> SpotLine
 generateSpotLineFromTemplate dunLine = map (\x -> generateSpotFromTemplate x) dunLine
