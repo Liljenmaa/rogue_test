@@ -5,11 +5,16 @@ module Interface
 ) where
 
 import Data.Char
+import Data.List.Split
 import UI.NCurses
 import Control.Monad.IO.Class
 
 import Game
 import Cursestools
+import Datatypes
+
+generateDungeonMapFromFile :: FilePath -> IO (DungeonMap)
+generateDungeonMapFromFile fp = fmap (endBy "\n") (readFile fp)
 
 mainCurses :: IO ()
 mainCurses = runCurses $ do

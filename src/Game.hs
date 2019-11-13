@@ -10,6 +10,13 @@ import Datatypes
 import Logic
 import Cursestools
 
+makeDungeonString :: DungeonMap -> String
+makeDungeonString [] = ""
+makeDungeonString (dl:dls) = dl ++ "\n" ++ makeDungeonString dls
+
+saveDungeonToFile :: FilePath -> DungeonMap -> IO ()
+saveDungeonToFile fp dmap = writeFile fp (makeDungeonString dmap)
+
 printDungeon :: OutputMap -> Update ()
 printDungeon [] = return ()
 printDungeon (x:xs) = do
