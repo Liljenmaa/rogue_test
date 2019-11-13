@@ -45,7 +45,8 @@ gameLoopInner w (x, y) smap = do
 -- get rid of do?
 gameLoop :: Window -> DungeonMap -> Curses ()
 gameLoop w dmap = do
-    gameLoopInner w plCoords $ generateSpotMapFromTemplate dmap
+    gameLoopInner w plCoords smap
     return ()
     where
         plCoords = (generateMonCoordsFromDMap dmap) !! 0
+        smap = generateSpotMapFromTemplate dmap

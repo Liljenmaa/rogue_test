@@ -18,28 +18,6 @@ import Datatypes
 createFloor :: Floor -> Spot -> Spot
 createFloor floor spot = Spot (spotMonster spot) floor
 
-createFloorOnCoordsInner :: CoordY -> Floor -> SpotLine -> SpotLine
-createFloorOnCoordsInner y floor (s:ss)
-    | y /= 0 = s : createFloorOnCoordsInner (y - 1) floor ss
-    | otherwise = (createFloor floor s) : ss
-
-createFloorOnCoords :: Coords -> Floor -> SpotMap -> SpotMap
-createFloorOnCoords (x, y) floor (sl:sls)
-    | x /= 0 = sl : createFloorOnCoords (x - 1, y) floor sls
-    | otherwise = (createFloorOnCoordsInner y floor sl) : sls
-
-createHorFloorOnCoordsInner :: CoordY -> Width -> Floor -> SpotLine -> SpotLine
-createHorFloorOnCoordsInner y w floor (s:ss)
-    | y /= 0 = s : createHorFloorOnCoordsInner (y - 1) w floor ss
-    | otherwise = if w /= 0
-        then (createFloor floor s) : createHorFloorOnCoordsInner 0 (w - 1) floor ss
-        else s : ss
-
-createHorFloorOnCoords :: Coords -> Width -> Floor -> SpotMap -> SpotMap
-createHorFloorOnCoords (x, y) w floor (sl:sls)
-    | x /= 0 = sl : createHorFloorOnCoords (x - 1, y) w floor sls
-    | otherwise = (createHorFloorOnCoordsInner y w floor sl) : sls
-
 -- createVerWall 
 
 -- createHouse :: (CoordX, CoordY) -> (CoordX, CoordY)
@@ -137,6 +115,18 @@ doActionOnCoords (x, y) func (sl:sls)
     | x /= 0 = sl : doActionOnCoords (x - 1, y) func sls
     | otherwise = (doActionOnCoordsInner y func sl) : sls
 
+doActionsOnCoordsInner :: CoordY -> CoordY -> Action -> Bool -> SpotLine -> SpotLine
+doActionsOnCoordsInner y w func fill (s:ss)
+    | y /= 0 = s : doActionsOnCoordsInner (y - 1) (w - 1) func fill ss
+    | w /= 0 = (func s) : doActionsOnCoordsInner 0 (w - 1) func fill ss
+    | otherwise = (func s) : ss
+
+doActionsOnCoords :: Coords -> Coords -> Action -> Bool -> SpotMap -> SpotMap
+doActionsOnCoords (x, y) (z, w) func fill (sl:sls)
+    | x /= 0 = sl : doActionsOnCoords (x - 1, y) (z - 1, w) func fill sls
+    | z /= 0 = doActionsOnCoordsInner y w func fill sl : (doActionsOnCoords (0, y) (z - 1, w) func fill sls)
+    | otherwise = doActionsOnCoordsInner y w func fill sl : sls
+
 -- obsolete this
 activateCmdBlock :: Coords -> SpotMap -> SpotMap
 activateCmdBlock coords smap
@@ -167,7 +157,7 @@ isWall (Wall _) = True
 isWall _ = False
 
 isClosedDoor :: Floor -> Bool
-isClosedDoor (Door sym isOpen) = not isOpen 
+isClosedDoor (Door sym isOpen) = not isOpen
 isClosedDoor _ = False
 
 isOpenDoor :: Floor -> Bool
