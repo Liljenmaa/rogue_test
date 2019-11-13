@@ -3,6 +3,7 @@ module Cursestools
     receiveNumber,
     extractEventLetter,
     generateDungeonMapFromFile,
+    saveDungeonToFile,
     checkNumberKey,
     clearScr,
     cursorDown,
@@ -44,6 +45,14 @@ receiveNumber w = do
 -- move to somewhere else
 generateDungeonMapFromFile :: FilePath -> IO (DungeonMap)
 generateDungeonMapFromFile fp = fmap (endBy "\n") (readFile fp)
+
+makeDungeonString :: DungeonMap -> String
+makeDungeonString [] = ""
+makeDungeonString (dl:dls) = dl ++ "\n" ++ makeDungeonString dls
+
+-- same with this
+saveDungeonToFile :: FilePath -> DungeonMap -> IO ()
+saveDungeonToFile fp dmap = writeFile fp (makeDungeonString dmap)
 
 checkNumberKey :: Event -> Bool
 checkNumberKey (EventCharacter num) = isDigit num

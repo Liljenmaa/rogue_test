@@ -2,6 +2,7 @@ module Logic
 (
     moveMonster,
     retrieveOutputMap,
+    makeDungeonMap,
 --  generateSpotMap,
     generateSpotMapFromTemplate,
     generateMonCoordsFromDMap,
@@ -79,10 +80,22 @@ generateMonCoordsFromDMap :: DungeonMap -> MonCoordsList
 generateMonCoordsFromDMap dmap = generateMonCoordsFromDMapInner (0, 0) dmap
 
 generateSpotLineFromTemplate :: DungeonLine -> SpotLine
-generateSpotLineFromTemplate dunLine = map (\x -> generateSpotFromTemplate x) dunLine
+generateSpotLineFromTemplate dunLine = map generateSpotFromTemplate dunLine
 
 generateSpotMapFromTemplate :: DungeonMap -> SpotMap
-generateSpotMapFromTemplate dmap = map (\x -> generateSpotLineFromTemplate x) dmap
+generateSpotMapFromTemplate dmap = map generateSpotLineFromTemplate dmap
+
+makeDungeonSpot :: Spot -> Sym
+makeDungeonSpot s
+    | spotMonster s /= Nothing = symbolMon $ fromMaybe (Dummy) $ spotMonster s
+    | otherwise = symbolFloor $ spotFloor s
+
+makeDungeonLine :: SpotLine -> DungeonLine
+makeDungeonLine sline = map makeDungeonSpot sline
+
+-- does not work for doors etc walkable floor that isn't empty floor
+makeDungeonMap :: SpotMap -> DungeonMap
+makeDungeonMap smap = map makeDungeonLine smap
 
 retrieveSpotInner :: CoordY -> SpotLine -> Spot
 retrieveSpotInner y (s:ss)
@@ -121,6 +134,7 @@ doActionsOnCoordsInner y w func fill (s:ss)
     | w /= 0 = (func s) : doActionsOnCoordsInner 0 (w - 1) func fill ss
     | otherwise = (func s) : ss
 
+-- fill not implemented
 doActionsOnCoords :: Coords -> Coords -> Action -> Bool -> SpotMap -> SpotMap
 doActionsOnCoords (x, y) (z, w) func fill (sl:sls)
     | x /= 0 = sl : doActionsOnCoords (x - 1, y) (z - 1, w) func fill sls

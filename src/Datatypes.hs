@@ -42,7 +42,8 @@ data Monster = Player {
     symbolMon :: Sym
 } | Monster {
     symbolMon :: Sym
-} deriving (Eq)
+} | Dummy {
+} deriving (Eq)
 
 data Spot = Spot {
     spotMonster :: Maybe Monster,

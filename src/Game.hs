@@ -4,6 +4,7 @@ module Game
 ) where
 
 import UI.NCurses
+import Control.Monad.IO.Class
 
 import Datatypes
 import Logic
@@ -11,7 +12,7 @@ import Cursestools
 
 printDungeon :: OutputMap -> Update ()
 printDungeon [] = return ()
-printDungeon (x:xs) = do 
+printDungeon (x:xs) = do
     drawString x
     cursorPos <- cursorPosition
     moveCursor ((fst cursorPos) + 1) 0
@@ -31,6 +32,7 @@ gameLoopInner w (x, y) smap = do
     
     if realInput == 'S' || realInput == 's'
         then do
+            liftIO $ saveDungeonToFile "dungeonmap.txt" $ makeDungeonMap smap
             return ()
         else do
             let mmResult = moveMonster (x, y) realInput smap
