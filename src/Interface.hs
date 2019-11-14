@@ -26,17 +26,7 @@ mainCurses = runCurses $ do
     updateWindow w $ do
         drawStrLn "Welcome to the alpha version of [REDACTED]!"
         drawStrLn "Trying to load file \"dungeonmap.txt\"..."
---      drawStrLn "Let's setup some variables first."
---      drawStrLn "What should the map x be?"
     render
-    
---  mapX <- receiveNumber w
-    
---  updateWindow w $ do
---      drawStrLn "How about the map y?"
---  render
-    
---  mapY <- receiveNumber w
     
     dmap <- liftIO $ generateDungeonMapFromFile "dungeonmap.txt"
     

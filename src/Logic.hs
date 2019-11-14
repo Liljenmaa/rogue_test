@@ -19,9 +19,10 @@ import Datatypes
 createFloor :: Floor -> Spot -> Spot
 createFloor floor spot = Spot (spotMonster spot) floor
 
--- createVerWall 
-
 -- createHouse :: (CoordX, CoordY) -> (CoordX, CoordY)
+
+createMonster :: Maybe Monster -> Spot -> Spot
+createMonster mon spot = Spot mon (spotFloor spot)
 
 setMonsterToSpotLine :: Maybe Monster -> CoordY -> SpotLine -> SpotLine
 setMonsterToSpotLine mon y (s:ss)
@@ -128,18 +129,47 @@ doActionOnCoords (x, y) func (sl:sls)
     | x /= 0 = sl : doActionOnCoords (x - 1, y) func sls
     | otherwise = (doActionOnCoordsInner y func sl) : sls
 
-doActionsOnCoordsInner :: CoordY -> CoordY -> Action -> Bool -> SpotLine -> SpotLine
-doActionsOnCoordsInner y w func fill (s:ss)
-    | y /= 0 = s : doActionsOnCoordsInner (y - 1) (w - 1) func fill ss
-    | w /= 0 = (func s) : doActionsOnCoordsInner 0 (w - 1) func fill ss
+doActionOnRectangleInner :: CoordY -> CoordY -> Action -> Bool -> SpotLine -> SpotLine
+doActionOnRectangleInner y w func fill (s:ss)
+    | y /= 0 = s : doActionOnRectangleInner (y - 1) (w - 1) func fill ss
+    | w /= 0 = (func s) : doActionOnRectangleInner 0 (w - 1) func fill ss
     | otherwise = (func s) : ss
 
--- fill not implemented
-doActionsOnCoords :: Coords -> Coords -> Action -> Bool -> SpotMap -> SpotMap
-doActionsOnCoords (x, y) (z, w) func fill (sl:sls)
-    | x /= 0 = sl : doActionsOnCoords (x - 1, y) (z - 1, w) func fill sls
-    | z /= 0 = doActionsOnCoordsInner y w func fill sl : (doActionsOnCoords (0, y) (z - 1, w) func fill sls)
-    | otherwise = doActionsOnCoordsInner y w func fill sl : sls
+-- fill not implemented (fills automatically)
+doActionOnRectangle :: Coords -> Coords -> Action -> Bool -> SpotMap -> SpotMap
+doActionOnRectangle (x, y) (z, w) func fill (sl:sls)
+    | x /= 0 = sl : doActionOnRectangle (x - 1, y) (z - 1, w) func fill sls
+    | z /= 0 = doActionOnRectangleInner y w func fill sl : (doActionOnRectangle (0, y) (z - 1, w) func fill sls)
+    | otherwise = doActionOnRectangleInner y w func fill sl : sls
+
+checkCoordsWithSameXInner :: CoordX -> Int -> [Coords] -> Int
+checkCoordsWithSameXInner _ acc [] = acc
+checkCoordsWithSameXInner x acc (crd:crds) = if fst crd == x
+    then checkCoordsWithSameXInner x (acc + 1) crds
+    else acc
+
+checkCoordsWithSameX :: [Coords] -> Int
+checkCoordsWithSameX (crd:crds) = checkCoordsWithSameXInner (fst crd) 1 (crds)
+
+doActionOnMultipleCoordsInner :: [CoordY] -> Action -> SpotLine -> SpotLine
+doActionOnMultipleCoordsInner [] _ sls = sls
+doActionOnMultipleCoordsInner _ _ [] = []
+doActionOnMultipleCoordsInner (y:ys) func (s:ss)
+    | y /= 0 = s : doActionOnMultipleCoordsInner (map (subtract 1) (y:ys)) func ss
+    | otherwise = (func s) : doActionOnMultipleCoordsInner (map (subtract 1) ys) func ss
+
+-- Coords have to be sorted
+doActionOnMultipleCoords :: [Coords] -> Action -> SpotMap -> SpotMap
+doActionOnMultipleCoords [] _ smap = smap
+doActionOnMultipleCoords _ _ [] = []
+doActionOnMultipleCoords (crd:crds) func (sl:sls)
+    | fst crd /= 0 = sl : doActionOnMultipleCoords scrollCoords func sls
+    | otherwise = (doActionOnMultipleCoordsInner samexYs func sl) : doActionOnMultipleCoords rest func sls
+    where
+        samexYs = map (\x -> snd x) (take sameXInt (crd:crds))
+        rest = drop sameXInt scrollCoords
+        sameXInt = checkCoordsWithSameX (crd:crds)
+        scrollCoords = map (\(x, y) -> (x - 1, y)) (crd:crds)
 
 -- obsolete this
 activateCmdBlock :: Coords -> SpotMap -> SpotMap
@@ -212,16 +242,21 @@ checkMoveLegality (x, y) dir smap
         sw = (x + 1, y - 1)
         se = (x + 1, y + 1)
 
+
+-- moveMonsterAction :: Coords -> Action -> Coords -> Action
+-- moveMonsterAction remCoords addCoords
+
+-- revamp this shit
 moveMonster :: Coords -> Direction -> SpotMap -> (Coords, SpotMap)
 moveMonster (x, y) dir smap
-    | dir == 'h' && checkMoveLegality (x, y) dir smap = (left, setMonsterToSpotMap mon left monRemovedMap)
-    | dir == 'j' && checkMoveLegality (x, y) dir smap = (down, setMonsterToSpotMap mon down monRemovedMap)
-    | dir == 'k' && checkMoveLegality (x, y) dir smap = (up, setMonsterToSpotMap mon up monRemovedMap)
-    | dir == 'l' && checkMoveLegality (x, y) dir smap = (right, setMonsterToSpotMap mon right monRemovedMap)
-    | dir == 'y' && checkMoveLegality (x, y) dir smap = (nw, setMonsterToSpotMap mon nw monRemovedMap)
-    | dir == 'u' && checkMoveLegality (x, y) dir smap = (ne, setMonsterToSpotMap mon ne monRemovedMap)
-    | dir == 'b' && checkMoveLegality (x, y) dir smap = (sw, setMonsterToSpotMap mon sw monRemovedMap)
-    | dir == 'n' && checkMoveLegality (x, y) dir smap = (se, setMonsterToSpotMap mon se monRemovedMap)
+    | dir == 'h' && checkMoveLegality (x, y) dir smap = (left, doActionOnCoords left (createMonster mon) monRemovedMap)
+    | dir == 'j' && checkMoveLegality (x, y) dir smap = (down, doActionOnCoords down (createMonster mon) monRemovedMap)
+    | dir == 'k' && checkMoveLegality (x, y) dir smap = (up, doActionOnCoords up (createMonster mon) monRemovedMap)
+    | dir == 'l' && checkMoveLegality (x, y) dir smap = (right, doActionOnCoords right (createMonster mon) monRemovedMap)
+    | dir == 'y' && checkMoveLegality (x, y) dir smap = (nw, doActionOnCoords nw (createMonster mon) monRemovedMap)
+    | dir == 'u' && checkMoveLegality (x, y) dir smap = (ne, doActionOnCoords ne (createMonster mon) monRemovedMap)
+    | dir == 'b' && checkMoveLegality (x, y) dir smap = (sw, doActionOnCoords sw (createMonster mon) monRemovedMap)
+    | dir == 'n' && checkMoveLegality (x, y) dir smap = (se, doActionOnCoords se (createMonster mon) monRemovedMap)
     | otherwise = (stay, smap)
     where
         monRemovedMap = setMonsterToSpotMap Nothing (x, y) smap
