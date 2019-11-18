@@ -15,10 +15,6 @@ import Data.Maybe
 
 import Datatypes
 
--- some mon interaction here
-createFloor :: Floor -> Spot -> Spot
-createFloor floor spot = spot { spotFloor = floor }
-
 -- createHouse :: (CoordX, CoordY) -> (CoordX, CoordY)
 
 createMonster :: Maybe Monster -> Spot -> Spot
@@ -95,14 +91,6 @@ makeDungeonLine sline = map makeDungeonSpot sline
 makeDungeonMap :: SpotMap -> DungeonMap
 makeDungeonMap smap = map makeDungeonLine smap
 
-retrieveSpotInner :: CoordY -> SpotLine -> Spot
-retrieveSpotInner 0 (s:ss) = s
-retrieveSpotInner y (s:ss) = retrieveSpotInner (y - 1) ss
-
-retrieveSpot :: Coords -> SpotMap -> Spot
-retrieveSpot (0, y) (sl:sls) = retrieveSpotInner y sl
-retrieveSpot (x, y) (sl:sls) = retrieveSpot ((x - 1), y) sls
-
 -- change name of symbolFloor to floorSym or vice versa?
 retrieveOutputSpot :: Spot -> Sym
 retrieveOutputSpot spot = case spotMonster spot of
@@ -173,13 +161,13 @@ alterDoor s = case spotFloor s of
     _              -> s
 
 activateCmdBlock :: Coords -> SpotMap -> SpotMap
-activateCmdBlock coords smap = case spotFloor $ retrieveSpot coords smap of
+activateCmdBlock (x, y) smap = case spotFloor $ smap !! x !! y of
     (CmdBlock s c l) -> doActionOnCoords l c smap
     _                -> smap
 
 -- maybe make the search before input? not sure
 checkObstacle :: Coords -> SpotMap -> Bool
-checkObstacle coords smap = case spotFloor $ retrieveSpot coords smap of
+checkObstacle (x, y) smap = case spotFloor $ smap !! x !! y of
     (Wall _)       -> True
     (Door _ False) -> True
     _              -> False
