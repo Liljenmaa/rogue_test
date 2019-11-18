@@ -6,7 +6,7 @@ module Logic
 --  generateSpotMap,
     generateSpotMapFromTemplate,
     generateMonCoordsFromDMap,
-    openDoor,
+    alterDoor,
     isCmdBlockPress
 ) where
 
@@ -17,22 +17,20 @@ import Datatypes
 
 -- some mon interaction here
 createFloor :: Floor -> Spot -> Spot
-createFloor floor spot = Spot (spotMonster spot) floor
+createFloor floor spot = spot { spotFloor = floor }
 
 -- createHouse :: (CoordX, CoordY) -> (CoordX, CoordY)
 
 createMonster :: Maybe Monster -> Spot -> Spot
-createMonster mon spot = Spot mon (spotFloor spot)
+createMonster mon spot = spot { spotMonster = mon }
 
 setMonsterToSpotLine :: Maybe Monster -> CoordY -> SpotLine -> SpotLine
-setMonsterToSpotLine mon y (s:ss)
-    | y == 0 = Spot { spotMonster = mon, spotFloor = spotFloor s } : ss
-    | otherwise = s : setMonsterToSpotLine mon (y - 1) ss
+setMonsterToSpotLine mon 0 (s:ss) = s { spotMonster = mon } : ss
+setMonsterToSpotLine mon y (s:ss) = s : setMonsterToSpotLine mon (y - 1) ss
 
 setMonsterToSpotMap :: Maybe Monster -> Coords -> SpotMap -> SpotMap
-setMonsterToSpotMap mon (x, y) (sline:s)
-    | x == 0 = setMonsterToSpotLine mon y sline : s
-    | otherwise = sline : setMonsterToSpotMap mon ((x - 1), y) s
+setMonsterToSpotMap mon (0, y) (sl:sls) = setMonsterToSpotLine mon y sl : sls
+setMonsterToSpotMap mon (x, y) (sl:sls) = sl : setMonsterToSpotMap mon ((x - 1), y) sls
 
 -- not in use
 generateSpot :: Sym -> Spot
@@ -64,10 +62,15 @@ generateSpotFromTemplate sym = case sym of
 --  '¤' -> Spot Nothing (CmdBlock something)
     '@' -> Spot (Just (Player '@')) (EmptyFloor '.')
 
+generateSpotLineFromTemplate :: DungeonLine -> SpotLine
+generateSpotLineFromTemplate dline = map generateSpotFromTemplate dline
+
+generateSpotMapFromTemplate :: DungeonMap -> SpotMap
+generateSpotMapFromTemplate dmap = map generateSpotLineFromTemplate dmap
+
 generateMonCoordsFromSym :: Sym -> Coords -> MonCoordsList
-generateMonCoordsFromSym sym coords = case sym of
-    '@' -> [coords];
-     _  -> []
+generateMonCoordsFromSym '@' coords = [coords]
+generateMonCoordsFromSym  _  _      = []
 
 generateMonCoordsFromDLine :: Coords -> DungeonLine -> MonCoordsList
 generateMonCoordsFromDLine _ [] = []
@@ -80,16 +83,10 @@ generateMonCoordsFromDMapInner (x, y) (dl:dls) = (generateMonCoordsFromDLine (x,
 generateMonCoordsFromDMap :: DungeonMap -> MonCoordsList
 generateMonCoordsFromDMap dmap = generateMonCoordsFromDMapInner (0, 0) dmap
 
-generateSpotLineFromTemplate :: DungeonLine -> SpotLine
-generateSpotLineFromTemplate dunLine = map generateSpotFromTemplate dunLine
-
-generateSpotMapFromTemplate :: DungeonMap -> SpotMap
-generateSpotMapFromTemplate dmap = map generateSpotLineFromTemplate dmap
-
 makeDungeonSpot :: Spot -> Sym
-makeDungeonSpot s
-    | spotMonster s /= Nothing = symbolMon $ fromMaybe (Dummy) $ spotMonster s
-    | otherwise = symbolFloor $ spotFloor s
+makeDungeonSpot s = case spotMonster s of
+    Nothing -> symbolFloor $ spotFloor s
+    Just x  -> symbolMon x
 
 makeDungeonLine :: SpotLine -> DungeonLine
 makeDungeonLine sline = map makeDungeonSpot sline
@@ -99,35 +96,32 @@ makeDungeonMap :: SpotMap -> DungeonMap
 makeDungeonMap smap = map makeDungeonLine smap
 
 retrieveSpotInner :: CoordY -> SpotLine -> Spot
-retrieveSpotInner y (s:ss)
-    | y /= 0 = retrieveSpotInner (y - 1) ss
-    | otherwise = s
+retrieveSpotInner 0 (s:ss) = s
+retrieveSpotInner y (s:ss) = retrieveSpotInner (y - 1) ss
 
 retrieveSpot :: Coords -> SpotMap -> Spot
-retrieveSpot (x, y) (sl:sls)
-    | x /= 0 = retrieveSpot ((x - 1), y) sls
-    | otherwise = retrieveSpotInner y sl
+retrieveSpot (0, y) (sl:sls) = retrieveSpotInner y sl
+retrieveSpot (x, y) (sl:sls) = retrieveSpot ((x - 1), y) sls
 
+-- change name of symbolFloor to floorSym or vice versa?
 retrieveOutputSpot :: Spot -> Sym
-retrieveOutputSpot spot
-    | spotMonster spot /= Nothing = symbolMon $ fromMaybe (Monster ' ') (spotMonster spot)
-    | otherwise = symbolFloor $ spotFloor spot
+retrieveOutputSpot spot = case spotMonster spot of
+    Nothing -> symbolFloor $ spotFloor spot
+    Just x  -> symbolMon x
 
 retrieveOutputLine :: SpotLine -> OutputLine
-retrieveOutputLine sline = map (\x -> retrieveOutputSpot x) sline
+retrieveOutputLine sline = map retrieveOutputSpot sline
 
 retrieveOutputMap :: SpotMap -> OutputMap
-retrieveOutputMap smap = map (\x -> retrieveOutputLine x) smap
+retrieveOutputMap smap = map retrieveOutputLine smap
 
 doActionOnCoordsInner :: CoordY -> Action -> SpotLine -> SpotLine
-doActionOnCoordsInner y func (s:ss)
-    | y /= 0 = s : doActionOnCoordsInner (y - 1) func ss
-    | otherwise = (func s) : ss 
+doActionOnCoordsInner 0 func (s:ss) = func s : ss
+doActionOnCoordsInner y func (s:ss) = s : doActionOnCoordsInner (y - 1) func ss
 
 doActionOnCoords :: Coords -> Action -> SpotMap -> SpotMap
-doActionOnCoords (x, y) func (sl:sls)
-    | x /= 0 = sl : doActionOnCoords (x - 1, y) func sls
-    | otherwise = (doActionOnCoordsInner y func sl) : sls
+doActionOnCoords (0, y) func (sl:sls) = doActionOnCoordsInner y func sl : sls
+doActionOnCoords (x, y) func (sl:sls) = sl : doActionOnCoords (x - 1, y) func sls
 
 doActionOnRectangleInner :: CoordY -> CoordY -> Action -> Bool -> SpotLine -> SpotLine
 doActionOnRectangleInner y w func fill (s:ss)
@@ -149,27 +143,28 @@ checkCoordsWithSameXInner x acc (crd:crds) = if fst crd == x
     else acc
 
 checkCoordsWithSameX :: [Coords] -> Int
+checkCoordsWithSameX [] = 0
 checkCoordsWithSameX (crd:crds) = checkCoordsWithSameXInner (fst crd) 1 (crds)
 
 doActionOnMultipleCoordsInner :: [CoordY] -> Action -> SpotLine -> SpotLine
 doActionOnMultipleCoordsInner [] _ sls = sls
 doActionOnMultipleCoordsInner _ _ [] = []
-doActionOnMultipleCoordsInner (y:ys) func (s:ss)
-    | y /= 0 = s : doActionOnMultipleCoordsInner (map (subtract 1) (y:ys)) func ss
-    | otherwise = (func s) : doActionOnMultipleCoordsInner (map (subtract 1) ys) func ss
+doActionOnMultipleCoordsInner (0:ys) func (s:ss) = (func s) : doActionOnMultipleCoordsInner (map (subtract 1) ys) func ss
+doActionOnMultipleCoordsInner (y:ys) func (s:ss) = s : doActionOnMultipleCoordsInner (map (subtract 1) (y:ys)) func ss
 
 -- Coords have to be sorted
+-- Maybe you can pattern match inside a pattern match?
 doActionOnMultipleCoords :: [Coords] -> Action -> SpotMap -> SpotMap
 doActionOnMultipleCoords [] _ smap = smap
 doActionOnMultipleCoords _ _ [] = []
-doActionOnMultipleCoords (crd:crds) func (sl:sls)
+doActionOnMultipleCoords coords@(crd:crds) func (sl:sls)
     | fst crd /= 0 = sl : doActionOnMultipleCoords scrollCoords func sls
     | otherwise = (doActionOnMultipleCoordsInner samexYs func sl) : doActionOnMultipleCoords rest func sls
     where
-        samexYs = map (\x -> snd x) (take sameXInt (crd:crds))
+        samexYs = map snd (take sameXInt coords)
         rest = drop sameXInt scrollCoords
-        sameXInt = checkCoordsWithSameX (crd:crds)
-        scrollCoords = map (\(x, y) -> (x - 1, y)) (crd:crds)
+        sameXInt = checkCoordsWithSameX coords
+        scrollCoords = map (\(x, y) -> (x - 1, y)) coords
 
 -- obsolete this
 activateCmdBlock :: Coords -> SpotMap -> SpotMap
@@ -178,35 +173,16 @@ activateCmdBlock coords smap
     | otherwise = smap
     where floor = spotFloor $ retrieveSpot coords smap
 
-openDoor :: Action
-openDoor s
-    | isClosedDoor floor = createFloor (Door '/' True) s 
-    | otherwise = s
-    where
-        floor = spotFloor s
+alterDoor :: Action
+alterDoor s = case spotFloor s of
+    (Door _ False) -> s { spotFloor = ((spotFloor s) { isOpen = True }) }
+    (Door _ True)  -> s { spotFloor = ((spotFloor s) { isOpen = False }) }
+    _              -> s
 
-closeDoor :: Action
-closeDoor s
-    | isOpenDoor floor = createFloor (Door '+' False) s
-    | otherwise = s
-    where
-        floor = spotFloor s
-
+-- obsolete this and next
 isCmdBlock :: Floor -> Bool
 isCmdBlock (CmdBlock _ _ _) = True
 isCmdBlock _ = False
-
-isWall :: Floor -> Bool
-isWall (Wall _) = True
-isWall _ = False
-
-isClosedDoor :: Floor -> Bool
-isClosedDoor (Door sym isOpen) = not isOpen
-isClosedDoor _ = False
-
-isOpenDoor :: Floor -> Bool
-isOpenDoor (Door sym isOpen) = isOpen
-isOpenDoor _ = False
 
 isCmdBlockPress :: Coords -> SpotMap -> SpotMap
 isCmdBlockPress coords smap
@@ -214,9 +190,12 @@ isCmdBlockPress coords smap
     | otherwise = smap
     where floor = spotFloor $ retrieveSpot coords smap
 
+-- maybe make the search before input? not sure
 checkObstacle :: Coords -> SpotMap -> Bool
-checkObstacle coords smap = isWall floor || isClosedDoor floor
-    where floor = spotFloor $ retrieveSpot coords smap
+checkObstacle coords smap = case spotFloor $ retrieveSpot coords smap of
+    (Wall _)       -> True
+    (Door _ False) -> True
+    _              -> False
 
 checkMoveLegality :: Coords -> Direction -> SpotMap -> Bool
 checkMoveLegality (x, y) dir smap
