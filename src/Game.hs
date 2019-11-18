@@ -47,7 +47,7 @@ gameLoopInner w (x, y) smap = do
             let newX = fst mmCoords
             let newY = snd mmCoords
             let mmMap = snd mmResult
-            let newMmMap = isCmdBlockPress (newX, newY) mmMap
+            let newMmMap = activateCmdBlock (newX, newY) mmMap
             
             gameLoopInner w (newX, newY) newMmMap
 

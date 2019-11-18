@@ -12,8 +12,8 @@ module Cursestools
 import Data.Char
 import UI.NCurses
 
-receiveNumberInner :: Window -> Integer -> Integer -> String -> Curses (Int)
-receiveNumberInner w x y acc = do
+receiveNumberInner :: Window -> (Integer, Integer) -> String -> Curses (Int)
+receiveNumberInner w (x, y) acc = do
     ev' <- waitFor w (\ev -> checkNumberKey ev || ev == EventCharacter '\n')
     if ev' == EventCharacter '\n'
         then do
@@ -24,18 +24,18 @@ receiveNumberInner w x y acc = do
         else do
             updateWindow w $ do
                 drawString [extractEventLetter ev']
-                winSize <- windowSize
-                curPos <- cursorPosition
-                if (snd curPos) == (snd winSize)
-                    then moveCursor x ( y + 1)
+                (_, wy) <- windowSize
+                (_, cy) <- cursorPosition
+                if cy == wy
+                    then moveCursor x (y + 1)
                     else return ()
             render
-            receiveNumberInner w x (y + 1) (acc ++ [extractEventLetter ev'])
+            receiveNumberInner w (x, (y + 1)) (acc ++ [extractEventLetter ev'])
 
 receiveNumber :: Window -> Curses (Int)
 receiveNumber w = do
     curPos <- getCursor w
-    receiveNumberInner w (fst curPos) (snd curPos) ""
+    receiveNumberInner w curPos ""
 
 checkNumberKey :: Event -> Bool
 checkNumberKey (EventCharacter num) = isDigit num
@@ -51,8 +51,8 @@ clearScr w =
 
 cursorDown :: Update ()
 cursorDown = do
-    cursorPos <- cursorPosition
-    moveCursor (fst cursorPos + 1) 0
+    (x, _) <- cursorPosition
+    moveCursor (x + 1) 0
 
 drawStrLn :: String -> Update ()
 drawStrLn str = do

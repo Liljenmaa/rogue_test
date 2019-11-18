@@ -7,7 +7,7 @@ module Logic
     generateSpotMapFromTemplate,
     generateMonCoordsFromDMap,
     alterDoor,
-    isCmdBlockPress
+    activateCmdBlock
 ) where
 
 import Control.Applicative
@@ -150,7 +150,7 @@ doActionOnMultipleCoordsInner :: [CoordY] -> Action -> SpotLine -> SpotLine
 doActionOnMultipleCoordsInner [] _ sls = sls
 doActionOnMultipleCoordsInner _ _ [] = []
 doActionOnMultipleCoordsInner (0:ys) func (s:ss) = (func s) : doActionOnMultipleCoordsInner (map (subtract 1) ys) func ss
-doActionOnMultipleCoordsInner (y:ys) func (s:ss) = s : doActionOnMultipleCoordsInner (map (subtract 1) (y:ys)) func ss
+doActionOnMultipleCoordsInner ys func (s:ss) = s : doActionOnMultipleCoordsInner (map (subtract 1) ys) func ss
 
 -- Coords have to be sorted
 -- Maybe you can pattern match inside a pattern match?
@@ -166,29 +166,16 @@ doActionOnMultipleCoords coords@(crd:crds) func (sl:sls)
         sameXInt = checkCoordsWithSameX coords
         scrollCoords = map (\(x, y) -> (x - 1, y)) coords
 
--- obsolete this
-activateCmdBlock :: Coords -> SpotMap -> SpotMap
-activateCmdBlock coords smap
-    | isCmdBlock floor = doActionOnCoords (loc floor) (cmdAction floor) smap
-    | otherwise = smap
-    where floor = spotFloor $ retrieveSpot coords smap
-
 alterDoor :: Action
 alterDoor s = case spotFloor s of
     (Door _ False) -> s { spotFloor = ((spotFloor s) { isOpen = True }) }
     (Door _ True)  -> s { spotFloor = ((spotFloor s) { isOpen = False }) }
     _              -> s
 
--- obsolete this and next
-isCmdBlock :: Floor -> Bool
-isCmdBlock (CmdBlock _ _ _) = True
-isCmdBlock _ = False
-
-isCmdBlockPress :: Coords -> SpotMap -> SpotMap
-isCmdBlockPress coords smap
-    | isCmdBlock floor = activateCmdBlock coords smap
-    | otherwise = smap
-    where floor = spotFloor $ retrieveSpot coords smap
+activateCmdBlock :: Coords -> SpotMap -> SpotMap
+activateCmdBlock coords smap = case spotFloor $ retrieveSpot coords smap of
+    (CmdBlock s c l) -> doActionOnCoords l c smap
+    _                -> smap
 
 -- maybe make the search before input? not sure
 checkObstacle :: Coords -> SpotMap -> Bool
