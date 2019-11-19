@@ -47,9 +47,7 @@ gameLoopInner w (x, y) smap = do
     let realInput = extractEventLetter input
     
     if realInput == 'S' || realInput == 's'
-        then do
-            liftIO $ saveDungeonToFile "dungeonmap.txt" $ makeDungeonMap smap
-            return ()
+        then liftIO $ saveDungeonToFile "dungeonmap.txt" $ makeDungeonMap smap
         else do
             let mmResult = moveMonster (x, y) realInput smap
             let mmCoords = fst mmResult
@@ -57,7 +55,7 @@ gameLoopInner w (x, y) smap = do
             let newY = snd mmCoords
             let mmMap = snd mmResult
             let newMmMap = activateCmdBlock (newX, newY) mmMap
-            
+
             gameLoopInner w (newX, newY) newMmMap
 
 gameLoop :: Window -> DungeonMap -> EventsTxt -> Curses ()

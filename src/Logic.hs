@@ -22,13 +22,13 @@ import Datatypes
 createMonster :: Maybe Monster -> Spot -> Spot
 createMonster mon spot = spot { spotMonster = mon }
 
-setMonsterToSpotLine :: Maybe Monster -> CoordY -> SpotLine -> SpotLine
-setMonsterToSpotLine mon 0 (s:ss) = s { spotMonster = mon } : ss
-setMonsterToSpotLine mon y (s:ss) = s : setMonsterToSpotLine mon (y - 1) ss
-
 setMonsterToSpotMap :: Maybe Monster -> Coords -> SpotMap -> SpotMap
-setMonsterToSpotMap mon (0, y) (sl:sls) = setMonsterToSpotLine mon y sl : sls
+setMonsterToSpotMap mon (0, y) (sl:sls) = inner mon y sl : sls
+    where inner :: Maybe Monster -> CoordY -> SpotLine -> SpotLine
+          inner mon 0 (s:ss) = s { spotMonster = mon } : ss
+          inner mon y (s:ss) = s : inner mon (y - 1) ss
 setMonsterToSpotMap mon (x, y) (sl:sls) = sl : setMonsterToSpotMap mon ((x - 1), y) sls
+
 
 -- not in use
 generateSpot :: Sym -> Spot
@@ -61,38 +61,40 @@ generateSpotFromTemplate sym = case sym of
     '@' -> Spot (Just (Player '@')) (EmptyFloor '.')
     _   -> Spot Nothing (EmptyFloor '.')
 
-generateSpotLineFromTemplate :: DungeonLine -> SpotLine
-generateSpotLineFromTemplate dline = map generateSpotFromTemplate dline
-
 generateSpotMapFromTemplate :: DungeonMap -> SpotMap
-generateSpotMapFromTemplate dmap = map generateSpotLineFromTemplate dmap
-
-generateMonCoordsFromSym :: Sym -> Coords -> MonCoordsList
-generateMonCoordsFromSym '@' coords = [coords]
-generateMonCoordsFromSym  _  _      = []
-
-generateMonCoordsFromDLine :: Coords -> DungeonLine -> MonCoordsList
-generateMonCoordsFromDLine _ [] = []
-generateMonCoordsFromDLine (x, y) (d:ds) = (generateMonCoordsFromSym d (x, y)) ++ generateMonCoordsFromDLine (x, y + 1) ds
-
-generateMonCoordsFromDMapInner :: Coords -> DungeonMap -> MonCoordsList
-generateMonCoordsFromDMapInner _ [] = []
-generateMonCoordsFromDMapInner (x, y) (dl:dls) = (generateMonCoordsFromDLine (x, y) dl) ++ generateMonCoordsFromDMapInner (x + 1, y) dls
+generateSpotMapFromTemplate dmap = map inner dmap
+    where inner :: DungeonLine -> SpotLine
+          inner dline = map generateSpotFromTemplate dline
 
 generateMonCoordsFromDMap :: DungeonMap -> MonCoordsList
-generateMonCoordsFromDMap dmap = generateMonCoordsFromDMapInner (0, 0) dmap
-
-makeDungeonSpot :: Spot -> Sym
-makeDungeonSpot s = case spotMonster s of
-    Nothing -> symbolFloor $ spotFloor s
-    Just x  -> symbolMon x
+generateMonCoordsFromDMap dmap = inner (0, 0) dmap
+    where inner :: Coords -> DungeonMap -> MonCoordsList
+          inner _ [] = []
+          inner (x, y) (dl:dls) = (innerInner (x, y) dl) ++ inner (x + 1, y) dls
+              where innerInner :: Coords -> DungeonLine -> MonCoordsList
+                    innerInner _ [] = []
+                    innerInner (x, y) (d:ds) = (innest d (x, y)) ++ innerInner (x, y + 1) ds
+                        where innest :: Sym -> Coords -> MonCoordsList
+                              innest '@' coords = [coords]
+                              innest  _  _      = []
 
 makeDungeonLine :: SpotLine -> DungeonLine
-makeDungeonLine sline = map makeDungeonSpot sline
+makeDungeonLine sline = map inner sline
+    where inner :: Spot -> Sym
+          inner s = case spotMonster s of
+              Nothing -> symbolFloor $ spotFloor s
+              Just x  -> symbolMon x
 
 -- does not work for doors etc walkable floor that isn't empty floor
 makeDungeonMap :: SpotMap -> DungeonMap
-makeDungeonMap smap = map makeDungeonLine smap
+makeDungeonMap smap = map inner smap
+    where inner :: SpotLine -> DungeonLine
+          inner sline = map innest sline
+              where innest :: Spot -> Sym
+                    innest s = case spotMonster s of
+                        Nothing -> symbolFloor $ spotFloor s
+                        Just x  -> symbolMon x
+
 
 -- make it be not multiple times scrolling
 setupEvents :: EventsTxt -> SpotMap -> SpotMap
@@ -102,53 +104,44 @@ setupEvents (e:es) smap = setupEvents es $ doActionOnCoords (read (e !! 0) :: I
         action = wireCmdBlock alterDoor (read (e !! 2) :: Int, read (e !! 3) :: Int)
 
 -- change name of symbolFloor to floorSym or vice versa?
-retrieveOutputSpot :: Spot -> Sym
-retrieveOutputSpot spot = case spotMonster spot of
-    Nothing -> symbolFloor $ spotFloor spot
-    Just x  -> symbolMon x
-
-retrieveOutputLine :: SpotLine -> OutputLine
-retrieveOutputLine sline = map retrieveOutputSpot sline
-
 retrieveOutputMap :: SpotMap -> OutputMap
-retrieveOutputMap smap = map retrieveOutputLine smap
+retrieveOutputMap smap = map inner smap
+    where inner :: SpotLine -> OutputLine
+          inner sline = map innest sline
+              where innest :: Spot -> Sym
+                    innest spot = case spotMonster spot of
+                        Nothing -> symbolFloor $ spotFloor spot
+                        Just x  -> symbolMon x
 
-doActionOnCoordsInner :: CoordY -> Action -> SpotLine -> SpotLine
-doActionOnCoordsInner 0 func (s:ss) = func s : ss
-doActionOnCoordsInner y func (s:ss) = s : doActionOnCoordsInner (y - 1) func ss
-
+-- looks ugly
 doActionOnCoords :: Coords -> Action -> SpotMap -> SpotMap
-doActionOnCoords (0, y) func (sl:sls) = doActionOnCoordsInner y func sl : sls
+doActionOnCoords (0, y) func (sl:sls) = inner y func sl : sls
+    where inner :: CoordY -> Action -> SpotLine -> SpotLine
+          inner 0 func (s:ss) = func s : ss
+          inner y func (s:ss) = s : inner (y - 1) func ss
 doActionOnCoords (x, y) func (sl:sls) = sl : doActionOnCoords (x - 1, y) func sls
-
-doActionOnRectangleInner :: CoordY -> CoordY -> Action -> Bool -> SpotLine -> SpotLine
-doActionOnRectangleInner y w func fill (s:ss)
-    | y /= 0 = s : doActionOnRectangleInner (y - 1) (w - 1) func fill ss
-    | w /= 0 = (func s) : doActionOnRectangleInner 0 (w - 1) func fill ss
-    | otherwise = (func s) : ss
 
 -- fill not implemented (fills automatically)
 doActionOnRectangle :: Coords -> Coords -> Action -> Bool -> SpotMap -> SpotMap
 doActionOnRectangle (x, y) (z, w) func fill (sl:sls)
     | x /= 0 = sl : doActionOnRectangle (x - 1, y) (z - 1, w) func fill sls
-    | z /= 0 = doActionOnRectangleInner y w func fill sl : (doActionOnRectangle (0, y) (z - 1, w) func fill sls)
-    | otherwise = doActionOnRectangleInner y w func fill sl : sls
+    | z /= 0 = inner y w func fill sl : (doActionOnRectangle (0, y) (z - 1, w) func fill sls)
+    | otherwise = inner y w func fill sl : sls
+    where inner :: CoordY -> CoordY -> Action -> Bool -> SpotLine -> SpotLine
+          inner y w func fill (s:ss)
+              | y /= 0 = s : inner (y - 1) (w - 1) func fill ss
+              | w /= 0 = (func s) : inner 0 (w - 1) func fill ss
+              | otherwise = (func s) : ss
 
-checkCoordsWithSameXInner :: CoordX -> Int -> [Coords] -> Int
-checkCoordsWithSameXInner _ acc [] = acc
-checkCoordsWithSameXInner x acc (crd:crds) = if fst crd == x
-    then checkCoordsWithSameXInner x (acc + 1) crds
-    else acc
-
+-- connect this one and the one below
 checkCoordsWithSameX :: [Coords] -> Int
 checkCoordsWithSameX [] = 0
-checkCoordsWithSameX (crd:crds) = checkCoordsWithSameXInner (fst crd) 1 (crds)
-
-doActionOnMultipleCoordsInner :: [CoordY] -> Action -> SpotLine -> SpotLine
-doActionOnMultipleCoordsInner [] _ sls = sls
-doActionOnMultipleCoordsInner _ _ [] = []
-doActionOnMultipleCoordsInner (0:ys) func (s:ss) = (func s) : doActionOnMultipleCoordsInner (map (subtract 1) ys) func ss
-doActionOnMultipleCoordsInner ys func (s:ss) = s : doActionOnMultipleCoordsInner (map (subtract 1) ys) func ss
+checkCoordsWithSameX (crd:crds) = inner (fst crd) 1 (crds)
+    where inner :: CoordX -> Int -> [Coords] -> Int
+          inner _ acc [] = acc
+          inner x acc (crd:crds) = if fst crd == x
+              then inner x (acc + 1) crds
+              else acc
 
 -- Coords have to be sorted
 -- Maybe you can pattern match inside a pattern match?
@@ -157,12 +150,17 @@ doActionOnMultipleCoords [] _ smap = smap
 doActionOnMultipleCoords _ _ [] = []
 doActionOnMultipleCoords coords@(crd:crds) func (sl:sls)
     | fst crd /= 0 = sl : doActionOnMultipleCoords scrollCoords func sls
-    | otherwise = (doActionOnMultipleCoordsInner samexYs func sl) : doActionOnMultipleCoords rest func sls
+    | otherwise = (inner samexYs func sl) : doActionOnMultipleCoords rest func sls
     where
         samexYs = map snd (take sameXInt coords)
         rest = drop sameXInt scrollCoords
         sameXInt = checkCoordsWithSameX coords
         scrollCoords = map (\(x, y) -> (x - 1, y)) coords
+        inner :: [CoordY] -> Action -> SpotLine -> SpotLine
+        inner [] _ sls = sls
+        inner _ _ [] = []
+        inner (0:ys) func (s:ss) = (func s) : inner (map (subtract 1) ys) func ss
+        inner ys func (s:ss) = s : inner (map (subtract 1) ys) func ss
 
 dummyAction :: Action
 dummyAction s = s
