@@ -1,10 +1,13 @@
 module Game
 (
-    gameLoop
+    gameLoop,
+    generateDungeonMapFromFile,
+    readEvents
 ) where
 
 import UI.NCurses
 import Control.Monad.IO.Class
+import Data.List.Split
 
 import Datatypes
 import Logic
@@ -16,6 +19,12 @@ makeDungeonString (dl:dls) = dl ++ "\n" ++ makeDungeonString dls
 
 saveDungeonToFile :: FilePath -> DungeonMap -> IO ()
 saveDungeonToFile fp dmap = writeFile fp (makeDungeonString dmap)
+
+generateDungeonMapFromFile :: FilePath -> IO (DungeonMap)
+generateDungeonMapFromFile fp = fmap (endBy "\n") (readFile fp)
+
+readEvents :: FilePath -> IO (EventsTxt)
+readEvents fp = fmap (\x -> fmap words x) $ fmap (endBy "\n") (readFile fp)
 
 printDungeon :: OutputMap -> Update ()
 printDungeon [] = return ()
@@ -51,11 +60,8 @@ gameLoopInner w (x, y) smap = do
             
             gameLoopInner w (newX, newY) newMmMap
 
--- get rid of do?
-gameLoop :: Window -> DungeonMap -> Curses ()
-gameLoop w dmap = do
-    gameLoopInner w plCoords smap
-    return ()
+gameLoop :: Window -> DungeonMap -> EventsTxt -> Curses ()
+gameLoop w dmap emap = gameLoopInner w plCoords smap
     where
         plCoords = (generateMonCoordsFromDMap dmap) !! 0
-        smap = generateSpotMapFromTemplate dmap
+        smap = setupEvents emap $ generateSpotMapFromTemplate dmap

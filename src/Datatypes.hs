@@ -16,6 +16,7 @@ module Datatypes
     SpotMap,
     Direction,
     Action,
+    EventsTxt,
     Monster (..),
     Spot (..),
     Floor (..)
@@ -37,6 +38,7 @@ type SpotLine = [Spot]
 type SpotMap = [SpotLine]
 type Direction = Char
 type Action = Spot -> Spot
+type EventsTxt = [[String]]
 
 data Monster = Player {
     symbolMon :: Sym

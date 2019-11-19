@@ -5,16 +5,12 @@ module Interface
 ) where
 
 import Data.Char
-import Data.List.Split
 import UI.NCurses
 import Control.Monad.IO.Class
 
 import Game
 import Cursestools
 import Datatypes
-
-generateDungeonMapFromFile :: FilePath -> IO (DungeonMap)
-generateDungeonMapFromFile fp = fmap (endBy "\n") (readFile fp)
 
 mainCurses :: IO ()
 mainCurses = runCurses $ do
@@ -31,12 +27,18 @@ mainCurses = runCurses $ do
     dmap <- liftIO $ generateDungeonMapFromFile "dungeonmap.txt"
     
     updateWindow w $ do
-        drawStrLn "File loaded. Please start the program with s."
+        drawStrLn "Trying to load file \"events.txt\"..."
+    render
+    
+    emap <- liftIO $ readEvents "events.txt"
+    
+    updateWindow w $ do
+        drawStrLn "Loading complete. Please start the program with s."
     render
     
     waitFor w (\ev -> ev == EventCharacter 's' || ev == EventCharacter 'S')
     
-    gameLoop w dmap
+    gameLoop w dmap emap
     
     clearScr w
     

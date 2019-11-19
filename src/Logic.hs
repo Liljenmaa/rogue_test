@@ -1,5 +1,6 @@
 module Logic
 (
+    setupEvents,
     moveMonster,
     retrieveOutputMap,
     makeDungeonMap,
@@ -7,7 +8,8 @@ module Logic
     generateSpotMapFromTemplate,
     generateMonCoordsFromDMap,
     alterDoor,
-    activateCmdBlock
+    activateCmdBlock,
+    doActionOnCoords
 ) where
 
 import Control.Applicative
@@ -55,8 +57,9 @@ generateSpotFromTemplate sym = case sym of
     '#' -> Spot Nothing (Wall '#')
     '+' -> Spot Nothing (Door '+' False)
     '/' -> Spot Nothing (Door '/' True)
---  '¤' -> Spot Nothing (CmdBlock something)
+    '¤' -> Spot Nothing (CmdBlock '¤' dummyAction (0, 0))
     '@' -> Spot (Just (Player '@')) (EmptyFloor '.')
+    _   -> Spot Nothing (EmptyFloor '.')
 
 generateSpotLineFromTemplate :: DungeonLine -> SpotLine
 generateSpotLineFromTemplate dline = map generateSpotFromTemplate dline
@@ -90,6 +93,13 @@ makeDungeonLine sline = map makeDungeonSpot sline
 -- does not work for doors etc walkable floor that isn't empty floor
 makeDungeonMap :: SpotMap -> DungeonMap
 makeDungeonMap smap = map makeDungeonLine smap
+
+-- make it be not multiple times scrolling
+setupEvents :: EventsTxt -> SpotMap -> SpotMap
+setupEvents [] smap = smap
+setupEvents (e:es) smap = setupEvents es $ doActionOnCoords (read (e !! 0) :: Int, read (e !! 1) :: Int) action smap
+    where
+        action = wireCmdBlock alterDoor (read (e !! 2) :: Int, read (e !! 3) :: Int)
 
 -- change name of symbolFloor to floorSym or vice versa?
 retrieveOutputSpot :: Spot -> Sym
@@ -154,11 +164,19 @@ doActionOnMultipleCoords coords@(crd:crds) func (sl:sls)
         sameXInt = checkCoordsWithSameX coords
         scrollCoords = map (\(x, y) -> (x - 1, y)) coords
 
+dummyAction :: Action
+dummyAction s = s
+
 alterDoor :: Action
 alterDoor s = case spotFloor s of
-    (Door _ False) -> s { spotFloor = ((spotFloor s) { isOpen = True }) }
-    (Door _ True)  -> s { spotFloor = ((spotFloor s) { isOpen = False }) }
+    (Door _ False) -> s { spotFloor = ((spotFloor s) { symbolFloor = '/', isOpen = True }) }
+    (Door _ True)  -> s { spotFloor = ((spotFloor s) { symbolFloor = '+', isOpen = False }) }
     _              -> s
+
+wireCmdBlock :: Action -> Coords -> Action
+wireCmdBlock nact nloc s = case spotFloor s of
+    (CmdBlock _ act loc) -> s { spotFloor = ((spotFloor s) { cmdAction = nact, loc = nloc }) }
+    _                    -> s
 
 activateCmdBlock :: Coords -> SpotMap -> SpotMap
 activateCmdBlock (x, y) smap = case spotFloor $ smap !! x !! y of
@@ -195,7 +213,6 @@ checkMoveLegality (x, y) dir smap
         ne = (x - 1, y + 1)
         sw = (x + 1, y - 1)
         se = (x + 1, y + 1)
-
 
 -- moveMonsterAction :: Coords -> Action -> Coords -> Action
 -- moveMonsterAction remCoords addCoords
