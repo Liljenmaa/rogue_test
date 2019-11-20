@@ -30,40 +30,32 @@ setMonsterToSpotMap mon (x, y) (sl:sls) = sl : setMonsterToSpotMap mon ((x - 1),
 deepMap :: (a -> b) -> [[a]] -> [[b]]
 deepMap func mappable = map (\e -> map func e) mappable
 
--- not in use
-generateSpot :: Sym -> Spot
-generateSpot sym = Spot Nothing (EmptyFloor sym)
+-- scrollToInner :: Coords -> (SpotMap, SpotMap) -> (SpotMap, SpotMap)
+-- scrollToInner (0, y) (prev, sl:sls) = (prev, )
+-- scrollToInner (x ,y) (prev, sl:sls) = (prev : sl, scrollToInner (x - 1, y) sls)
 
--- not in use
-generateSpotLine :: Width -> SpotLine
-generateSpotLine y
-    | y == 0 = []
-    | otherwise = (generateSpot '.') : generateSpotLine (y - 1)
-
--- not in use
-generateSpotMapInner :: Height -> Width -> SpotMap
-generateSpotMapInner x y
-    | x == 0 = []
-    | otherwise = generateSpotLine y : generateSpotMapInner (x - 1) y 
+-- scrollTo :: Coords -> SpotMap -> (SpotMap, SpotMap)
+-- scrollTo coords smap = scrollToInner coords ([], smap)
 
 -- not in use
 generateSpotMap :: Height -> Width -> Coords -> SpotMap
-generateSpotMap x y plCoords = setMonsterToSpotMap (Just (Player '@')) plCoords (generateSpotMapInner x y)
-
--- maybe connect these two together sometime?
-generateSpotFromTemplate :: Sym -> Spot
-generateSpotFromTemplate sym = case sym of
-    '.' -> Spot Nothing (EmptyFloor '.')
-    '#' -> Spot Nothing (Wall '#')
-    '+' -> Spot Nothing (Door '+' False)
-    '/' -> Spot Nothing (Door '/' True)
-    '¤' -> Spot Nothing (CmdBlock '¤' dummyAction (0, 0))
-    '@' -> Spot (Just (Player '@')) (EmptyFloor '.')
-    _   -> Spot Nothing (EmptyFloor '.')
+generateSpotMap x y plCoords = setMonsterToSpotMap (Just (Player '@')) plCoords $ inner x y
+    where inner 0 y = []
+          inner x y = innerInner y : inner (x - 1) y
+              where innerInner 0 = []
+                    innerInner y = innest '.' : innerInner (y - 1)
+                        where innest sym = Spot Nothing (EmptyFloor sym)
 
 generateSpotMapFromTemplate :: DungeonMap -> SpotMap
-generateSpotMapFromTemplate dmap = map inner dmap
-    where inner dline = map generateSpotFromTemplate dline
+generateSpotMapFromTemplate dmap = deepMap func dmap
+    where func sym = case sym of
+                         '.' -> Spot Nothing (EmptyFloor '.')
+                         '#' -> Spot Nothing (Wall '#')
+                         '+' -> Spot Nothing (Door '+' False)
+                         '/' -> Spot Nothing (Door '/' True)
+                         '¤' -> Spot Nothing (CmdBlock '¤' dummyAction (0, 0))
+                         '@' -> Spot (Just (Player '@')) (EmptyFloor '.')
+                         _   -> Spot Nothing (EmptyFloor '.')
 
 -- decompose this
 generateMonCoordsFromDMap :: DungeonMap -> MonCoordsList
@@ -85,8 +77,7 @@ makeDungeonMap smap = deepMap func smap
 setupEvents :: EventsTxt -> SpotMap -> SpotMap
 setupEvents [] smap = smap
 setupEvents (e:es) smap = setupEvents es $ doActionOnCoords (read (e !! 0) :: Int, read (e !! 1) :: Int) action smap
-    where
-        action = wireCmdBlock alterDoor (read (e !! 2) :: Int, read (e !! 3) :: Int)
+    where action = wireCmdBlock alterDoor (read (e !! 2) :: Int, read (e !! 3) :: Int)
 
 -- looks ugly
 doActionOnCoords :: Coords -> Action -> SpotMap -> SpotMap
@@ -123,34 +114,33 @@ doActionOnMultipleCoords _ _ [] = []
 doActionOnMultipleCoords coords@(crd:crds) func (sl:sls)
     | fst crd /= 0 = sl : doActionOnMultipleCoords scrollCoords func sls
     | otherwise = (inner samexYs func sl) : doActionOnMultipleCoords rest func sls
-    where
-        samexYs = map snd (take sameXInt coords)
-        rest = drop sameXInt scrollCoords
-        sameXInt = checkCoordsWithSameX coords
-        scrollCoords = map (\(x, y) -> (x - 1, y)) coords
-        inner [] _ sls = sls
-        inner _ _ [] = []
-        inner (0:ys) func (s:ss) = (func s) : inner (map (subtract 1) ys) func ss
-        inner ys func (s:ss) = s : inner (map (subtract 1) ys) func ss
+    where samexYs = map snd (take sameXInt coords)
+          rest = drop sameXInt scrollCoords
+          sameXInt = checkCoordsWithSameX coords
+          scrollCoords = map (\(x, y) -> (x - 1, y)) coords
+          inner [] _ sls = sls
+          inner _ _ [] = []
+          inner (0:ys) func (s:ss) = (func s) : inner (map (subtract 1) ys) func ss
+          inner ys func (s:ss) = s : inner (map (subtract 1) ys) func ss
 
 dummyAction :: Action
 dummyAction s = s
 
 alterDoor :: Action
 alterDoor s = case spotFloor s of
-    (Door _ False) -> s { spotFloor = ((spotFloor s) { sym = '/', isOpen = True }) }
-    (Door _ True)  -> s { spotFloor = ((spotFloor s) { sym = '+', isOpen = False }) }
-    _              -> s
+    Door _ False -> s { spotFloor = ((spotFloor s) { sym = '/', isOpen = True }) }
+    Door _ True  -> s { spotFloor = ((spotFloor s) { sym = '+', isOpen = False }) }
+    _            -> s
 
 wireCmdBlock :: Action -> Coords -> Action
 wireCmdBlock nact nloc s = case spotFloor s of
-    (CmdBlock _ act loc) -> s { spotFloor = ((spotFloor s) { act = nact, loc = nloc }) }
-    _                    -> s
+    CmdBlock _ act loc -> s { spotFloor = ((spotFloor s) { act = nact, loc = nloc }) }
+    _                  -> s
 
 activateCmdBlock :: Coords -> SpotMap -> SpotMap
 activateCmdBlock (x, y) smap = case spotFloor $ smap !! x !! y of
-    (CmdBlock s c l) -> doActionOnCoords l c smap
-    _                -> smap
+    CmdBlock s c l -> doActionOnCoords l c smap
+    _              -> smap
 
 -- maybe make the search before input? not sure
 checkObstacle :: Coords -> SpotMap -> Bool
@@ -169,19 +159,18 @@ checkMoveLegality (x, y) dir smap
     | dir == 'u' = inBoundsMinX && inBoundsMaxY && not (checkObstacle ne smap)
     | dir == 'b' = inBoundsMinY && inBoundsMaxX && not (checkObstacle sw smap)
     | dir == 'n' = inBoundsMaxY && inBoundsMaxX && not (checkObstacle se smap)
-    where
-        inBoundsMinX = x > 0
-        inBoundsMaxX = x < (length smap) - 1
-        inBoundsMinY = y > 0
-        inBoundsMaxY = y < (length $ smap !! 0) - 1
-        up = (x - 1, y)
-        down = (x + 1, y)
-        left = (x, y - 1)
-        right = (x, y + 1)
-        nw = (x - 1, y - 1)
-        ne = (x - 1, y + 1)
-        sw = (x + 1, y - 1)
-        se = (x + 1, y + 1)
+    where inBoundsMinX = x > 0
+          inBoundsMaxX = x < (length smap) - 1
+          inBoundsMinY = y > 0
+          inBoundsMaxY = y < (length $ smap !! 0) - 1
+          up = (x - 1, y)
+          down = (x + 1, y)
+          left = (x, y - 1)
+          right = (x, y + 1)
+          nw = (x - 1, y - 1)
+          ne = (x - 1, y + 1)
+          sw = (x + 1, y - 1)
+          se = (x + 1, y + 1)
 
 -- moveMonsterAction :: Coords -> Action -> Coords -> Action
 -- moveMonsterAction remCoords addCoords
@@ -198,15 +187,14 @@ moveMonster (x, y) dir smap
     | dir == 'b' && checkMoveLegality (x, y) dir smap = (sw, doActionOnCoords sw (createMonster mon) monRemovedMap)
     | dir == 'n' && checkMoveLegality (x, y) dir smap = (se, doActionOnCoords se (createMonster mon) monRemovedMap)
     | otherwise = (stay, smap)
-    where
-        monRemovedMap = setMonsterToSpotMap Nothing (x, y) smap
-        mon = spotMonster $ (smap !! x) !! y
-        up = (x - 1, y)
-        down = (x + 1, y)
-        left = (x, y - 1)
-        right = (x, y + 1)
-        nw = (x - 1, y - 1)
-        ne = (x - 1, y + 1)
-        sw = (x + 1, y - 1)
-        se = (x + 1, y + 1)
-        stay = (x, y)
+    where monRemovedMap = setMonsterToSpotMap Nothing (x, y) smap
+          mon = spotMonster $ (smap !! x) !! y
+          up = (x - 1, y)
+          down = (x + 1, y)
+          left = (x, y - 1)
+          right = (x, y + 1)
+          nw = (x - 1, y - 1)
+          ne = (x - 1, y + 1)
+          sw = (x + 1, y - 1)
+          se = (x + 1, y + 1)
+          stay = (x, y)
