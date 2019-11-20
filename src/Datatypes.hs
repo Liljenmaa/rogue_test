@@ -48,14 +48,14 @@ data Spot = Spot {
 }
 
 data Floor = EmptyFloor {
-    symbolFloor :: Sym
+    sym :: Sym
 } | Wall {
-    symbolFloor :: Sym
+    sym :: Sym
 } | Door {
-    symbolFloor :: Sym,
+    sym :: Sym,
     isOpen :: Bool
 } | CmdBlock {
-    symbolFloor :: Sym,
-    cmdAction :: Action,
+    sym :: Sym,
+    act :: Action,
     loc :: (CoordX, CoordY)
 }

@@ -78,7 +78,7 @@ generateMonCoordsFromDMap dmap = inner (0, 0) dmap
 makeDungeonMap :: SpotMap -> DungeonMap
 makeDungeonMap smap = deepMap func smap
     where func s = case spotMonster s of
-                       Nothing -> symbolFloor $ spotFloor s
+                       Nothing -> sym $ spotFloor s
                        Just x  -> symbolMon x
 
 -- make it be not multiple times scrolling
@@ -138,13 +138,13 @@ dummyAction s = s
 
 alterDoor :: Action
 alterDoor s = case spotFloor s of
-    (Door _ False) -> s { spotFloor = ((spotFloor s) { symbolFloor = '/', isOpen = True }) }
-    (Door _ True)  -> s { spotFloor = ((spotFloor s) { symbolFloor = '+', isOpen = False }) }
+    (Door _ False) -> s { spotFloor = ((spotFloor s) { sym = '/', isOpen = True }) }
+    (Door _ True)  -> s { spotFloor = ((spotFloor s) { sym = '+', isOpen = False }) }
     _              -> s
 
 wireCmdBlock :: Action -> Coords -> Action
 wireCmdBlock nact nloc s = case spotFloor s of
-    (CmdBlock _ act loc) -> s { spotFloor = ((spotFloor s) { cmdAction = nact, loc = nloc }) }
+    (CmdBlock _ act loc) -> s { spotFloor = ((spotFloor s) { act = nact, loc = nloc }) }
     _                    -> s
 
 activateCmdBlock :: Coords -> SpotMap -> SpotMap
