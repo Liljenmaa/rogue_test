@@ -53,7 +53,7 @@ generateSpotMapFromTemplate dmap = deepMap func dmap
                          '#' -> Spot Nothing (Wall '#')
                          '+' -> Spot Nothing (Door '+' False)
                          '/' -> Spot Nothing (Door '/' True)
-                         '¤' -> Spot Nothing (CmdBlock '¤' dummyAction (0, 0))
+                         '¤' -> Spot Nothing (CmdBlock '¤' id (0, 0))
                          '@' -> Spot (Just (Player '@')) (EmptyFloor '.')
                          _   -> Spot Nothing (EmptyFloor '.')
 
@@ -122,9 +122,6 @@ doActionOnMultipleCoords coords@(crd:crds) func (sl:sls)
           inner _ _ [] = []
           inner (0:ys) func (s:ss) = (func s) : inner (map (subtract 1) ys) func ss
           inner ys func (s:ss) = s : inner (map (subtract 1) ys) func ss
-
-dummyAction :: Action
-dummyAction s = s
 
 alterDoor :: Action
 alterDoor s = case spotFloor s of
