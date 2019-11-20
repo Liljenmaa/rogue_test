@@ -26,7 +26,7 @@ generateDungeonMapFromFile fp = fmap (endBy "\n") (readFile fp)
 readEvents :: FilePath -> IO (EventsTxt)
 readEvents fp = fmap (\x -> fmap words x) $ fmap (endBy "\n") (readFile fp)
 
-printDungeon :: OutputMap -> Update ()
+printDungeon :: DungeonMap -> Update ()
 printDungeon [] = return ()
 printDungeon (x:xs) = do
     drawString x
@@ -40,7 +40,7 @@ gameLoopInner w (x, y) smap = do
     clearScr w
     
     updateWindow w $ do
-        printDungeon $ retrieveOutputMap smap
+        printDungeon $ makeDungeonMap smap
     render
     
     input <- waitFor w (\ev -> True)

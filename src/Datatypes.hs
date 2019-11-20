@@ -2,8 +2,6 @@ module Datatypes
 (
     DungeonLine,
     DungeonMap,
-    OutputLine,
-    OutputMap,
     Height,
     Width,
     CoordX,
@@ -24,8 +22,6 @@ module Datatypes
 
 type DungeonLine = String
 type DungeonMap = [String]
-type OutputLine = String
-type OutputMap = [String]
 type Height = Int
 type Width = Int
 type CoordX = Int
