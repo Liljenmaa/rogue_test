@@ -30,13 +30,6 @@ setMonsterToSpotMap mon (x, y) (sl:sls) = sl : setMonsterToSpotMap mon ((x - 1),
 deepMap :: (a -> b) -> [[a]] -> [[b]]
 deepMap func mappable = map (\e -> map func e) mappable
 
--- scrollToInner :: Coords -> (SpotMap, SpotMap) -> (SpotMap, SpotMap)
--- scrollToInner (0, y) (prev, sl:sls) = (prev, )
--- scrollToInner (x ,y) (prev, sl:sls) = (prev : sl, scrollToInner (x - 1, y) sls)
-
--- scrollTo :: Coords -> SpotMap -> (SpotMap, SpotMap)
--- scrollTo coords smap = scrollToInner coords ([], smap)
-
 -- not in use
 generateSpotMap :: Height -> Width -> Coords -> SpotMap
 generateSpotMap x y plCoords = setMonsterToSpotMap (Just (Player '@')) plCoords $ inner x y
@@ -79,12 +72,13 @@ setupEvents [] smap = smap
 setupEvents (e:es) smap = setupEvents es $ doActionOnCoords (read (e !! 0) :: Int, read (e !! 1) :: Int) action smap
     where action = wireCmdBlock alterDoor (read (e !! 2) :: Int, read (e !! 3) :: Int)
 
--- looks ugly
+-- is better than pattern matching version before
 doActionOnCoords :: Coords -> Action -> SpotMap -> SpotMap
-doActionOnCoords (0, y) func (sl:sls) = inner y func sl : sls
-    where inner 0 func (s:ss) = func s : ss
-          inner y func (s:ss) = s : inner (y - 1) func ss
-doActionOnCoords (x, y) func (sl:sls) = sl : doActionOnCoords (x - 1, y) func sls
+doActionOnCoords (x, y) func (sl:sls)
+    | x == 0 = inner y func sl : sls
+    | otherwise = sl : doActionOnCoords (x - 1, y) func sls
+        where inner 0 func (s:ss) = func s : ss
+              inner y func (s:ss) = s : inner (y - 1) func ss
 
 -- fill not implemented (fills automatically)
 doActionOnRectangle :: Coords -> Coords -> Action -> Bool -> SpotMap -> SpotMap
@@ -96,15 +90,6 @@ doActionOnRectangle (x, y) (z, w) func fill (sl:sls)
             | y /= 0 = s : inner (y - 1) (w - 1) func fill ss
             | w /= 0 = (func s) : inner 0 (w - 1) func fill ss
             | otherwise = (func s) : ss
-
--- connect this one and the one below
-checkCoordsWithSameX :: [Coords] -> Int
-checkCoordsWithSameX [] = 0
-checkCoordsWithSameX (crd:crds) = inner (fst crd) 1 (crds)
-    where inner _ acc [] = acc
-          inner x acc (crd:crds) = if fst crd == x
-              then inner x (acc + 1) crds
-              else acc
 
 -- Coords have to be sorted
 -- Maybe you can pattern match inside a pattern match?
@@ -122,6 +107,12 @@ doActionOnMultipleCoords coords@(crd:crds) func (sl:sls)
           inner _ _ [] = []
           inner (0:ys) func (s:ss) = (func s) : inner (map (subtract 1) ys) func ss
           inner ys func (s:ss) = s : inner (map (subtract 1) ys) func ss
+          checkCoordsWithSameX [] = 0
+          checkCoordsWithSameX (crd:crds) = inner (fst crd) 1 (crds)
+              where inner _ acc [] = acc
+                    inner x acc (crd:crds) = if fst crd == x
+                        then inner x (acc + 1) crds
+                        else acc
 
 alterDoor :: Action
 alterDoor s = case spotFloor s of
@@ -139,59 +130,32 @@ activateCmdBlock (x, y) smap = case spotFloor $ smap !! x !! y of
     CmdBlock s c l -> doActionOnCoords l c smap
     _              -> smap
 
--- maybe make the search before input? not sure
-checkObstacle :: Coords -> SpotMap -> Bool
-checkObstacle (x, y) smap = case spotFloor $ smap !! x !! y of
-    (Wall _)       -> True
-    (Door _ False) -> True
-    _              -> False
+-- connect these?
+checkInvalidMove :: Coords -> SpotMap -> Bool
+checkInvalidMove (x, y) smap
+    | x < 0 || x > (length smap) - 1 || y < 0 && y > (length $ smap !! 0) - 1 = True
+    | otherwise = case spotFloor $ smap !! x !! y of
+                      Wall _       -> True
+                      Door _ False -> True
+                      _            -> False
 
-checkMoveLegality :: Coords -> Direction -> SpotMap -> Bool
-checkMoveLegality (x, y) dir smap
-    | dir == 'h' = inBoundsMinY && not (checkObstacle left smap)
-    | dir == 'j' = inBoundsMaxX && not (checkObstacle down smap)
-    | dir == 'k' = inBoundsMinX && not (checkObstacle up smap)
-    | dir == 'l' = inBoundsMaxY && not (checkObstacle right smap)
-    | dir == 'y' = inBoundsMinY && inBoundsMinX && not (checkObstacle nw smap)
-    | dir == 'u' = inBoundsMinX && inBoundsMaxY && not (checkObstacle ne smap)
-    | dir == 'b' = inBoundsMinY && inBoundsMaxX && not (checkObstacle sw smap)
-    | dir == 'n' = inBoundsMaxY && inBoundsMaxX && not (checkObstacle se smap)
-    where inBoundsMinX = x > 0
-          inBoundsMaxX = x < (length smap) - 1
-          inBoundsMinY = y > 0
-          inBoundsMaxY = y < (length $ smap !! 0) - 1
-          up = (x - 1, y)
-          down = (x + 1, y)
-          left = (x, y - 1)
-          right = (x, y + 1)
-          nw = (x - 1, y - 1)
-          ne = (x - 1, y + 1)
-          sw = (x + 1, y - 1)
-          se = (x + 1, y + 1)
+-- scrolls many times
+checkAndMove :: Coords -> Coords -> SpotMap -> (Coords, SpotMap)
+checkAndMove cmon@(cx, cy) check smap
+    | checkInvalidMove check smap = (cmon, smap)
+    | otherwise = (check, doActionOnCoords cmon removeMon $ doActionOnCoords check addMon smap)
+        where removeMon s = s { spotMonster = Nothing }
+              addMon s = s { spotMonster = mon }
+              mon = spotMonster $ smap !! cx !! cy
 
--- moveMonsterAction :: Coords -> Action -> Coords -> Action
--- moveMonsterAction remCoords addCoords
-
--- revamp this shit
+-- still bad
 moveMonster :: Coords -> Direction -> SpotMap -> (Coords, SpotMap)
-moveMonster (x, y) dir smap
-    | dir == 'h' && checkMoveLegality (x, y) dir smap = (left, doActionOnCoords left (createMonster mon) monRemovedMap)
-    | dir == 'j' && checkMoveLegality (x, y) dir smap = (down, doActionOnCoords down (createMonster mon) monRemovedMap)
-    | dir == 'k' && checkMoveLegality (x, y) dir smap = (up, doActionOnCoords up (createMonster mon) monRemovedMap)
-    | dir == 'l' && checkMoveLegality (x, y) dir smap = (right, doActionOnCoords right (createMonster mon) monRemovedMap)
-    | dir == 'y' && checkMoveLegality (x, y) dir smap = (nw, doActionOnCoords nw (createMonster mon) monRemovedMap)
-    | dir == 'u' && checkMoveLegality (x, y) dir smap = (ne, doActionOnCoords ne (createMonster mon) monRemovedMap)
-    | dir == 'b' && checkMoveLegality (x, y) dir smap = (sw, doActionOnCoords sw (createMonster mon) monRemovedMap)
-    | dir == 'n' && checkMoveLegality (x, y) dir smap = (se, doActionOnCoords se (createMonster mon) monRemovedMap)
-    | otherwise = (stay, smap)
-    where monRemovedMap = setMonsterToSpotMap Nothing (x, y) smap
-          mon = spotMonster $ (smap !! x) !! y
-          up = (x - 1, y)
-          down = (x + 1, y)
-          left = (x, y - 1)
-          right = (x, y + 1)
-          nw = (x - 1, y - 1)
-          ne = (x - 1, y + 1)
-          sw = (x + 1, y - 1)
-          se = (x + 1, y + 1)
-          stay = (x, y)
+moveMonster cmon@(x, y) 'h' smap = checkAndMove cmon (x, y - 1)     smap
+moveMonster cmon@(x, y) 'j' smap = checkAndMove cmon (x + 1, y)     smap
+moveMonster cmon@(x, y) 'k' smap = checkAndMove cmon (x - 1, y)     smap
+moveMonster cmon@(x, y) 'l' smap = checkAndMove cmon (x, y + 1)     smap
+moveMonster cmon@(x, y) 'y' smap = checkAndMove cmon (x - 1, y - 1) smap
+moveMonster cmon@(x, y) 'u' smap = checkAndMove cmon (x - 1, y + 1) smap
+moveMonster cmon@(x, y) 'b' smap = checkAndMove cmon (x + 1, y - 1) smap
+moveMonster cmon@(x, y) 'n' smap = checkAndMove cmon (x + 1, y + 1) smap
+moveMonster cmon@(x, y) _   smap = (cmon, smap)
