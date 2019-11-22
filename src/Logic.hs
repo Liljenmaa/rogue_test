@@ -1,4 +1,5 @@
 -- move to an EventsTxt based action performing
+-- move from linked lists to arrays?
 
 module Logic
 (
@@ -28,9 +29,9 @@ generateSpotMap :: Height -> Width -> Coords -> SpotMap
 generateSpotMap x y plCoords = doActionOnCoords plCoords (\s -> s { monSpot = Just (Player '@') }) $ inner x y
     where inner 0 y = []
           inner x y = innerInner y : inner (x - 1) y
-              where innerInner 0 = []
-                    innerInner y = innest '.' : innerInner (y - 1)
-                        where innest sym = Spot Nothing (EmptyFloor sym)
+          innerInner 0 = []
+          innerInner y = innest '.' : innerInner (y - 1)
+          innest sym = Spot Nothing (EmptyFloor sym)
 
 generateSpotMapFromTemplate :: DungeonMap -> SpotMap
 generateSpotMapFromTemplate dmap = deepMap func dmap
@@ -48,10 +49,10 @@ generateMonCoordsFromDMap :: DungeonMap -> CoordsList
 generateMonCoordsFromDMap dmap = inner (0, 0) dmap
     where inner _ [] = []
           inner (x, y) (dl:dls) = (innerInner (x, y) dl) ++ inner (x + 1, y) dls
-              where innerInner _ [] = []
-                    innerInner (x, y) (d:ds) = (innest d (x, y)) ++ innerInner (x, y + 1) ds
-                        where innest '@' coords = [coords]
-                              innest  _  _      = []
+          innerInner _ [] = []
+          innerInner (x, y) (d:ds) = (innest d (x, y)) ++ innerInner (x, y + 1) ds
+          innest '@' coords = [coords]
+          innest  _  _      = []
 
 makeDungeonMap :: SpotMap -> DungeonMap
 makeDungeonMap smap = deepMap func smap
