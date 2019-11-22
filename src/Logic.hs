@@ -1,3 +1,5 @@
+-- move to an EventsTxt based action performing
+
 module Logic
 (
     setupEvents,
@@ -18,21 +20,12 @@ import Datatypes
 
 -- createHouse :: (CoordX, CoordY) -> (CoordX, CoordY)
 
-createMonster :: Maybe Monster -> Spot -> Spot
-createMonster mon spot = spot { spotMonster = mon }
-
-setMonsterToSpotMap :: Maybe Monster -> Coords -> SpotMap -> SpotMap
-setMonsterToSpotMap mon (0, y) (sl:sls) = inner mon y sl : sls
-    where inner mon 0 (s:ss) = s { spotMonster = mon } : ss
-          inner mon y (s:ss) = s : inner mon (y - 1) ss
-setMonsterToSpotMap mon (x, y) (sl:sls) = sl : setMonsterToSpotMap mon ((x - 1), y) sls
-
 deepMap :: (a -> b) -> [[a]] -> [[b]]
 deepMap func mappable = map (\e -> map func e) mappable
 
 -- not in use
 generateSpotMap :: Height -> Width -> Coords -> SpotMap
-generateSpotMap x y plCoords = setMonsterToSpotMap (Just (Player '@')) plCoords $ inner x y
+generateSpotMap x y plCoords = doActionOnCoords plCoords (\s -> s { monSpot = Just (Player '@') }) $ inner x y
     where inner 0 y = []
           inner x y = innerInner y : inner (x - 1) y
               where innerInner 0 = []
@@ -51,7 +44,7 @@ generateSpotMapFromTemplate dmap = deepMap func dmap
                          _   -> Spot Nothing (EmptyFloor '.')
 
 -- decompose this
-generateMonCoordsFromDMap :: DungeonMap -> MonCoordsList
+generateMonCoordsFromDMap :: DungeonMap -> CoordsList
 generateMonCoordsFromDMap dmap = inner (0, 0) dmap
     where inner _ [] = []
           inner (x, y) (dl:dls) = (innerInner (x, y) dl) ++ inner (x + 1, y) dls
@@ -62,9 +55,9 @@ generateMonCoordsFromDMap dmap = inner (0, 0) dmap
 
 makeDungeonMap :: SpotMap -> DungeonMap
 makeDungeonMap smap = deepMap func smap
-    where func s = case spotMonster s of
-                       Nothing -> sym $ spotFloor s
-                       Just x  -> symbolMon x
+    where func s = case monSpot s of
+                       Nothing -> symFlo $ floSpot s
+                       Just x  -> symMon x
 
 -- make it be not multiple times scrolling
 setupEvents :: EventsTxt -> SpotMap -> SpotMap
@@ -115,38 +108,34 @@ doActionOnMultipleCoords coords@(crd:crds) func (sl:sls)
                         else acc
 
 alterDoor :: Action
-alterDoor s = case spotFloor s of
-    Door _ False -> s { spotFloor = ((spotFloor s) { sym = '/', isOpen = True }) }
-    Door _ True  -> s { spotFloor = ((spotFloor s) { sym = '+', isOpen = False }) }
+alterDoor s = case floSpot s of
+    Door _ False -> s { floSpot = ((floSpot s) { symFlo = '/', isOpen = True }) }
+    Door _ True  -> s { floSpot = ((floSpot s) { symFlo = '+', isOpen = False }) }
     _            -> s
 
 wireCmdBlock :: Action -> Coords -> Action
-wireCmdBlock nact nloc s = case spotFloor s of
-    CmdBlock _ act loc -> s { spotFloor = ((spotFloor s) { act = nact, loc = nloc }) }
+wireCmdBlock nact nloc s = case floSpot s of
+    CmdBlock _ act loc -> s { floSpot = ((floSpot s) { act = nact, loc = nloc }) }
     _                  -> s
 
 activateCmdBlock :: Coords -> SpotMap -> SpotMap
-activateCmdBlock (x, y) smap = case spotFloor $ smap !! x !! y of
+activateCmdBlock (x, y) smap = case floSpot $ smap !! x !! y of
     CmdBlock s c l -> doActionOnCoords l c smap
     _              -> smap
-
--- connect these?
-checkInvalidMove :: Coords -> SpotMap -> Bool
-checkInvalidMove (x, y) smap
-    | x < 0 || x > (length smap) - 1 || y < 0 && y > (length $ smap !! 0) - 1 = True
-    | otherwise = case spotFloor $ smap !! x !! y of
-                      Wall _       -> True
-                      Door _ False -> True
-                      _            -> False
 
 -- scrolls many times
 checkAndMove :: Coords -> Coords -> SpotMap -> (Coords, SpotMap)
 checkAndMove cmon@(cx, cy) check smap
     | checkInvalidMove check smap = (cmon, smap)
     | otherwise = (check, doActionOnCoords cmon removeMon $ doActionOnCoords check addMon smap)
-        where removeMon s = s { spotMonster = Nothing }
-              addMon s = s { spotMonster = mon }
-              mon = spotMonster $ smap !! cx !! cy
+        where checkInvalidMove (x, y) smap
+                  | x < 0 || x > (length smap) - 1 || y < 0 || y > (length $ smap !! 0) - 1 = True
+                  | otherwise = case floSpot $ smap !! x !! y of
+                      Wall _       -> True
+                      Door _ False -> True
+                      _            -> False
+              removeMon s = s { monSpot = Nothing }
+              addMon s = s { monSpot = monSpot $ smap !! cx !! cy }
 
 -- still bad
 moveMonster :: Coords -> Direction -> SpotMap -> (Coords, SpotMap)

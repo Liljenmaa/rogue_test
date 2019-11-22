@@ -1,16 +1,13 @@
 module Datatypes
 (
-    DungeonLine,
     DungeonMap,
     Height,
     Width,
     CoordX,
     CoordY,
     Coords,
-    MonCoords,
-    MonCoordsList,
+    CoordsList,
     Sym,
-    SpotLine,
     SpotMap,
     Direction,
     Action,
@@ -20,42 +17,39 @@ module Datatypes
     Floor (..)
 ) where
 
-type DungeonLine = String
 type DungeonMap = [String]
 type Height = Int
 type Width = Int
 type CoordX = Int
 type CoordY = Int
 type Coords = (CoordX, CoordY)
-type MonCoords = Coords
-type MonCoordsList = [MonCoords]
+type CoordsList = [Coords]
 type Sym = Char
-type SpotLine = [Spot]
-type SpotMap = [SpotLine]
+type SpotMap = [[Spot]]
 type Direction = Char
 type Action = Spot -> Spot
 type EventsTxt = [[String]]
 
 data Monster = Player {
-    symbolMon :: Sym
+    symMon :: Sym
 } | Monster {
-    symbolMon :: Sym
+    symMon :: Sym
 } deriving (Eq)
 
 data Spot = Spot {
-    spotMonster :: Maybe Monster,
-    spotFloor :: Floor
+    monSpot :: Maybe Monster,
+    floSpot :: Floor
 }
 
 data Floor = EmptyFloor {
-    sym :: Sym
+    symFlo :: Sym
 } | Wall {
-    sym :: Sym
+    symFlo :: Sym
 } | Door {
-    sym :: Sym,
+    symFlo :: Sym,
     isOpen :: Bool
 } | CmdBlock {
-    sym :: Sym,
+    symFlo :: Sym,
     act :: Action,
     loc :: (CoordX, CoordY)
 }
