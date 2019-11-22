@@ -18,11 +18,10 @@ import Control.Applicative
 import Data.Maybe
 
 import Datatypes
+import Tools
+import Actions
 
 -- createHouse :: (CoordX, CoordY) -> (CoordX, CoordY)
-
-deepMap :: (a -> b) -> [[a]] -> [[b]]
-deepMap func mappable = map (\e -> map func e) mappable
 
 -- not in use
 generateSpotMap :: Height -> Width -> Coords -> SpotMap
@@ -108,17 +107,6 @@ doActionOnMultipleCoords coords@(crd:crds) func (sl:sls)
                         then inner x (acc + 1) crds
                         else acc
 
-alterDoor :: Action
-alterDoor s = case floSpot s of
-    Door _ False -> s { floSpot = ((floSpot s) { symFlo = '/', isOpen = True }) }
-    Door _ True  -> s { floSpot = ((floSpot s) { symFlo = '+', isOpen = False }) }
-    _            -> s
-
-wireCmdBlock :: Action -> Coords -> Action
-wireCmdBlock nact nloc s = case floSpot s of
-    CmdBlock _ act loc -> s { floSpot = ((floSpot s) { act = nact, loc = nloc }) }
-    _                  -> s
-
 activateCmdBlock :: Coords -> SpotMap -> SpotMap
 activateCmdBlock (x, y) smap = case floSpot $ smap !! x !! y of
     CmdBlock s c l -> doActionOnCoords l c smap
@@ -138,14 +126,5 @@ checkAndMove cmon@(cx, cy) check smap
               removeMon s = s { monSpot = Nothing }
               addMon s = s { monSpot = monSpot $ smap !! cx !! cy }
 
--- still bad
 moveMonster :: Coords -> Direction -> SpotMap -> (Coords, SpotMap)
-moveMonster cmon@(x, y) 'h' smap = checkAndMove cmon (x, y - 1)     smap
-moveMonster cmon@(x, y) 'j' smap = checkAndMove cmon (x + 1, y)     smap
-moveMonster cmon@(x, y) 'k' smap = checkAndMove cmon (x - 1, y)     smap
-moveMonster cmon@(x, y) 'l' smap = checkAndMove cmon (x, y + 1)     smap
-moveMonster cmon@(x, y) 'y' smap = checkAndMove cmon (x - 1, y - 1) smap
-moveMonster cmon@(x, y) 'u' smap = checkAndMove cmon (x - 1, y + 1) smap
-moveMonster cmon@(x, y) 'b' smap = checkAndMove cmon (x + 1, y - 1) smap
-moveMonster cmon@(x, y) 'n' smap = checkAndMove cmon (x + 1, y + 1) smap
-moveMonster cmon@(x, y) _   smap = (cmon, smap)
+moveMonster cmon@(x, y) dir smap = checkAndMove cmon (dirToCrds dir cmon) smap

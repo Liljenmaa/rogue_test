@@ -9,6 +9,7 @@ import UI.NCurses
 import Control.Monad.IO.Class
 
 import Game
+import Tools
 import Cursestools
 import Datatypes
 
@@ -24,7 +25,7 @@ mainCurses = runCurses $ do
         drawStrLn "Trying to load file \"dungeonmap.txt\"..."
     render
     
-    dmap <- liftIO $ generateDungeonMapFromFile "dungeonmap.txt"
+    dmap <- liftIO $ loadDungeon "dungeonmap.txt"
     
     updateWindow w $ do
         drawStrLn "Trying to load file \"events.txt\"..."
@@ -36,7 +37,7 @@ mainCurses = runCurses $ do
         drawStrLn "Loading complete. Please start the program with s."
     render
     
-    waitFor w (\ev -> ev == EventCharacter 's' || ev == EventCharacter 'S')
+    waitFor w (\ltr -> ltr == 's' || ltr == 'S')
     
     gameLoop w dmap emap
     
