@@ -8,8 +8,8 @@ import Datatypes
 
 alterDoor :: Action
 alterDoor s = case floSpot s of
-    Door _ False -> s { floSpot = ((floSpot s) { symFlo = '/', isOpen = True }) }
-    Door _ True  -> s { floSpot = ((floSpot s) { symFlo = '+', isOpen = False }) }
+    Door _ False -> s { floSpot = (Door { symFlo = '/', isOpen = True }) }
+    Door _ True  -> s { floSpot = (Door { symFlo = '+', isOpen = False }) }
     _            -> s
 
 wireCmdBlock :: Action -> Coords -> Action

@@ -1,5 +1,4 @@
 -- move to an EventsTxt based action performing
--- move from linked lists to arrays?
 
 module Logic
 (

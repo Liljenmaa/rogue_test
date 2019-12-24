@@ -16,32 +16,42 @@ import Datatypes
 mainCurses :: IO ()
 mainCurses = runCurses $ do
     setEcho False
-    w <- defaultWindow
+    defW <- defaultWindow
+    logW <- cloneWindow defW
     
-    clearScr w
+    defWSize <- updateWindow defW windowSize
+    defWCoords <- updateWindow defW windowPosition
     
-    updateWindow w $ do
+    updateWindow logW $ do
+        resizeWindow 6 (snd defWSize)
+        moveWindow 15 (snd defWCoords)
+    
+    clearScr defW
+    clearScr logW
+    
+    updateWindow defW $ do
         drawStrLn "Welcome to the alpha version of [REDACTED]!"
         drawStrLn "Trying to load file \"dungeonmap.txt\"..."
     render
     
     dmap <- liftIO $ loadDungeon "dungeonmap.txt"
     
-    updateWindow w $ do
+    updateWindow defW $ do
         drawStrLn "Trying to load file \"events.txt\"..."
     render
     
     emap <- liftIO $ readEvents "events.txt"
     
-    updateWindow w $ do
+    updateWindow defW $ do
         drawStrLn "Loading complete. Please start the program with s."
     render
     
-    waitFor w (\ltr -> ltr == 's' || ltr == 'S')
+    waitFor defW (\ltr -> ltr == 's' || ltr == 'S')
     
-    gameLoop w dmap emap
+    let wnds = (defW, logW)
+    gameLoop wnds dmap emap
     
-    clearScr w
+    clearScr defW
     
     return ()
 

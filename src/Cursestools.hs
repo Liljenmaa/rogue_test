@@ -2,6 +2,7 @@ module Cursestools
 (
     receiveNumber,
     clearScr,
+    cursorUp,
     cursorDown,
     drawStrLn,
     waitFor
@@ -43,6 +44,11 @@ clearScr w =
     updateWindow w $ do
         clear
         moveCursor 0 0
+
+cursorUp :: Update ()
+cursorUp = do
+    (x, _) <- cursorPosition
+    moveCursor (x - 1) 0
 
 cursorDown :: Update ()
 cursorDown = do

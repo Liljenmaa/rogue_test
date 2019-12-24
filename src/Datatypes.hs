@@ -12,6 +12,7 @@ module Datatypes
     Direction,
     Action,
     EventsTxt,
+    MessageLog,
     Monster (..),
     Spot (..),
     Floor (..)
@@ -29,6 +30,7 @@ type SpotMap = [[Spot]]
 type Direction = Char
 type Action = Spot -> Spot
 type EventsTxt = [[String]]
+type MessageLog = [String]
 
 data Monster = Player {
     symMon :: Sym
